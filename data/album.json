@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "albumId": "gomoku-github-pages-shared",
+  "revision": "efc2d4ae-7150-4c3a-99a6-75a9d433e7a2",
+  "settings": {
+    "nameOne": "森",
+    "nameTwo": "芷",
+    "contactDate": "2026-11-14",
+    "firstMetDate": "2026-11-22",
+    "startDate": "",
+    "message": ""
+  },
+  "entries": [
+    {
+      "id": "4eb2c409-54c4-49ba-ae4c-53dd1627f501",
+      "date": "2026-11-22",
+      "title": "光明初遇",
+      "story": "“我会游泳，我来救你”",
+      "location": "光明区虹桥公园",
+      "category": "约会",
+      "favorite": false,
+      "photos": [
+        {
+          "id": "b30957df-483a-4c4a-83ce-cc5a1d867dff",
+          "name": "1122-光明.jpg",
+          "file": "assets/photos/7ccfd68ec6da5c46c242d4f5ee39a204ca91372682787d1463523b3f3be2c372.webp"
+        }
+      ],
+      "updatedAt": 1795575733615
+    },
+    {
+      "id": "8b67d121-f611-487e-bdfc-7ad25194902e",
+      "date": "2026-11-24",
+      "title": "你怎么像光一样啊",
+      "story": "“你先挂电话”\n“女人(头油油地摇晃两下，邪魅一笑)，我可能爱上你了”",
+      "location": "",
+      "category": "日常",
+      "favorite": false,
+      "photos": [],
+      "updatedAt": 1795678463876
+    }
+  ],
+  "updatedAt": 1795678463877
+}
