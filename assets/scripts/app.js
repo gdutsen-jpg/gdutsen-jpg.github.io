@@ -92,10 +92,6 @@ function render() {
   }
   $('first-met-value').textContent = s.firstMetDate ? readableDate(s.firstMetDate) : 'Not set yet';
   $('contact-value').textContent = s.contactDate ? readableDate(s.contactDate) : 'Not set yet';
-  if(s.contactDate){
-    const contactDays=C.daysBetween(s.contactDate,C.today());
-    $('contact-label').textContent=contactDays>=0?`Contact · ${countLabel(contactDays+1,'day')}`:`Contact · in ${countLabel(-contactDays,'day')}`;
-  }else $('contact-label').textContent='Contact';
   $('anniversary-summary').hidden = !s.startDate;
   if (s.startDate) {
     const days = C.daysBetween(s.startDate,C.today());

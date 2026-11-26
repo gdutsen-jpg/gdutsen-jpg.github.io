@@ -171,10 +171,8 @@ body {
 }
 .weekend-panel {
   display: grid;
-  grid-template-columns: minmax(0, 300px) minmax(0, 380px);
+  grid-template-columns: minmax(0, 300px);
   justify-content: center;
-  align-items: center;
-  gap: clamp(14px, 4vw, 48px);
 }
 .weekend-play {
   display: flex;
@@ -240,39 +238,10 @@ body {
   font-size: 15px;
   overflow-wrap: anywhere;
 }
-.weekend-options {
-  min-width: 0;
-}
-.weekend-options-title {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-.weekend-activity-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-.weekend-activity-list li {
-  padding: 3px 8px;
-  max-width: 100%;
-  border-radius: 7px;
-  background: var(--soft);
-  color: var(--accent-dark);
-  font-size: 14px;
-  overflow-wrap: anywhere;
-}
 @media (max-width: 680px) {
   .album-module {
     margin-top: 26px;
     padding-top: 20px;
-  }
-  .weekend-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: clamp(10px, 3vw, 18px);
   }
   .weekend-dial {
     width: min(100%, 210px);

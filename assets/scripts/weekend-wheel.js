@@ -5,7 +5,6 @@
   if (!wheel) return;
 
   const disc = wheel.querySelector('#weekend-disc');
-  const activityList = wheel.querySelector('#weekend-activities');
   const spin = wheel.querySelector('#weekend-spin');
   const result = wheel.querySelector('#weekend-result');
   const context = disc.getContext('2d');
@@ -130,13 +129,7 @@
     });
   }
 
-  const items = activities.map(activity => {
-    const item = document.createElement('li');
-    item.textContent = activity;
-    return item;
-  });
-  activityList.replaceChildren(...items);
-  activityList.hidden = activities.length === 0;
+  if (activities.length) disc.setAttribute('aria-label', 'Activity wheel: ' + activities.join(', '));
   spin.disabled = activities.length === 0;
   result.textContent = activities.length ? '' : 'No activities yet.';
   spin.addEventListener('click', spinWheel);
