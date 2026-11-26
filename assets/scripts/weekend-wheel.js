@@ -5,17 +5,17 @@
   if (!wheel) return;
 
   const disc = wheel.querySelector('#weekend-disc');
-  const editor = wheel.querySelector('#weekend-activities');
+  const activityList = wheel.querySelector('#weekend-activities');
   const spin = wheel.querySelector('#weekend-spin');
   const result = wheel.querySelector('#weekend-result');
-  const saveStatus = wheel.querySelector('#weekend-save');
   const context = disc.getContext('2d');
-  const storageKey = 'gomoku-weekend-wheel-activities-v1';
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const fullTurn = 2 * Math.PI;
   const palette = ['#edd9e6', '#f5e1d7', '#e3e9d8', '#dfe7f0', '#ede0ef', '#f4e9d6', '#e7e1ef'];
-
-  let activities = [];
+  const configuredActivities = globalThis.GomokuPublishedContent?.activities;
+  const activities = Array.isArray(configuredActivities)
+    ? configuredActivities.filter(activity => typeof activity === 'string').map(activity => activity.trim()).filter(Boolean)
+    : [];
   let rotation = 0;
   let animation = null;
 
@@ -75,7 +75,7 @@
       context.save();
       context.translate(center, center);
       context.rotate(mid + (upsideDown ? Math.PI : 0));
-      context.font = `600 ${fontSize}px "Segoe UI", "Microsoft YaHei", sans-serif`;
+      context.font = `600 ${fontSize}px "Gomoku Pixel", "Microsoft YaHei", sans-serif`;
       context.fillStyle = '#443344';
       context.textAlign = upsideDown ? 'left' : 'right';
       context.textBaseline = 'middle';
@@ -88,27 +88,6 @@
   function setRotation(degrees) {
     rotation = degrees;
     disc.style.transform = `rotate(${degrees}deg)`;
-  }
-
-  function applyActivities() {
-    if (animation) {
-      animation.cancel();
-      animation = null;
-    }
-    activities = editor.value.split(/\r?\n/).map(activity => activity.trim()).filter(Boolean);
-    setRotation(0);
-    drawWheel();
-    spin.disabled = activities.length === 0;
-    result.textContent = activities.length ? '' : 'Add an activity to spin.';
-  }
-
-  function saveActivities() {
-    try {
-      localStorage.setItem(storageKey, editor.value);
-      saveStatus.textContent = 'Saved in this browser.';
-    } catch {
-      saveStatus.textContent = 'This browser could not save the activity list.';
-    }
   }
 
   function showSelection(activity, degrees) {
@@ -151,23 +130,18 @@
     });
   }
 
-  try {
-    const saved = localStorage.getItem(storageKey);
-    if (saved !== null) {
-      editor.value = saved;
-      saveStatus.textContent = 'Saved in this browser.';
-    }
-  } catch {
-    saveStatus.textContent = 'This browser could not load saved activities.';
-  }
-
-  editor.addEventListener('input', () => {
-    saveActivities();
-    applyActivities();
+  const items = activities.map(activity => {
+    const item = document.createElement('li');
+    item.textContent = activity;
+    return item;
   });
+  activityList.replaceChildren(...items);
+  activityList.hidden = activities.length === 0;
+  spin.disabled = activities.length === 0;
+  result.textContent = activities.length ? '' : 'No activities yet.';
   spin.addEventListener('click', spinWheel);
-
-  applyActivities();
+  drawWheel();
+  if (document.fonts) document.fonts.ready.then(drawWheel);
   if (typeof ResizeObserver === 'function') {
     new ResizeObserver(drawWheel).observe(disc);
   } else {

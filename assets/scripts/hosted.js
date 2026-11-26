@@ -6,8 +6,9 @@
     'assets/scripts/core.js',
     'assets/scripts/app.js',
     'assets/scripts/daylight-theme.js',
+    'data/site-content.js',
+    'assets/scripts/browser-backup.js',
     'assets/scripts/weekend-wheel.js',
-    'assets/scripts/message-board.js',
     'assets/maps/travel-map-data.js',
     'assets/scripts/travel-maps.js',
   ];

@@ -1,7 +1,7 @@
-Gomoku Pixel is a glyph subset of Fusion Pixel 12px Monospaced SC.
+Gomoku Pixel is a renamed copy of Fusion Pixel 12px Monospaced SC.
 Upstream release: https://github.com/TakWolf/fusion-pixel-font/releases/tag/2026.11.10
 Source: fusion-pixel-12px-monospaced-zh_hans.otf.woff2
-Modifications: character subsetting and naming. Glyph outlines are unchanged.
+Modifications: font naming. Glyph outlines are unchanged.
 
 
 Fusion Pixel Font
