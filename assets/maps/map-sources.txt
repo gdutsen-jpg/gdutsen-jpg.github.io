@@ -1,0 +1,22 @@
+Made with Natural Earth
+
+Natural Earth vector data is released into the public domain.
+Terms of use: https://www.naturalearthdata.com/about/terms-of-use/
+
+World map
+Natural Earth 5.1.1, 1:50 million Admin 0 – Countries
+https://www.naturalearthdata.com/downloads/50m-cultural-vectors/
+https://naturalearth.s3.amazonaws.com/50m_cultural/ne_50m_admin_0_countries.zip
+Natural Earth 5.1.1, 1:10 million Admin 0 – Countries supplements regions absent from the 1:50 million data.
+https://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/
+https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_0_countries.zip
+
+China map
+Natural Earth 5.1.1, 1:10 million Admin 1 – States, Provinces supplies the 31 mainland province-level divisions.
+https://www.naturalearthdata.com/downloads/10m-cultural-vectors/
+https://naturalearth.s3.amazonaws.com/10m_cultural/ne_10m_admin_1_states_provinces.zip
+The 1:10 million Admin 0 – Countries dataset provides geometry for the Hong Kong, Macau, and Taiwan travel regions on this map.
+
+Travel display
+The world map uses Equal Earth. The China map uses Albers Equal Area.
+Coordinates are reduced to suit a browser display. The simplified outlines follow Natural Earth's geographic depiction and are intended to label travel entries.

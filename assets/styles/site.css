@@ -160,10 +160,12 @@ body {
   #brand-title { font-size: 13px; }
 }
 
-.weekend-wheel {
-  margin: 52px 0 40px;
+.album-module {
+  margin-top: 32px;
+  padding-top: 25px;
+  border-top: 1px solid var(--line);
 }
-.weekend-wheel h2 {
+.album-module > h2 {
   margin: 0 0 16px;
   font: 500 27px/1.25 var(--serif);
 }
@@ -173,10 +175,6 @@ body {
   justify-content: center;
   align-items: center;
   gap: clamp(14px, 4vw, 48px);
-  padding: clamp(14px, 3vw, 30px);
-  border: 1px solid var(--line);
-  border-radius: 16px;
-  background: var(--paper);
 }
 .weekend-play {
   display: flex;
@@ -274,14 +272,14 @@ body {
   font-size: 12px;
 }
 @media (max-width: 680px) {
-  .weekend-wheel {
-    margin-top: 36px;
+  .album-module {
+    margin-top: 26px;
+    padding-top: 20px;
   }
   .weekend-panel {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: clamp(10px, 3vw, 18px);
-    padding: clamp(11px, 3vw, 18px);
   }
   .weekend-dial {
     width: min(100%, 210px);
@@ -310,5 +308,175 @@ body {
   #weekend-activities {
     padding: 8px 9px;
     line-height: 1.5;
+  }
+}
+
+.message-board-layout,
+.travel-map-layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(22px, 5vw, 60px);
+}
+#message-form {
+  min-width: 0;
+}
+#message-form label {
+  display: block;
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+}
+#message-form label small {
+  color: var(--muted);
+  font-weight: 400;
+}
+#message-form input,
+#message-form textarea,
+.travel-select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 14px/1.5 var(--sans);
+}
+#message-name {
+  margin: 0 0 13px;
+}
+#message-text {
+  display: block;
+  resize: vertical;
+}
+.message-form-buttons,
+.message-entry-actions,
+.travel-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.message-form-buttons {
+  margin: 10px 0 0;
+}
+#message-status,
+#message-empty,
+.travel-instructions,
+.travel-summary {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+#message-status {
+  min-height: 1.4em;
+}
+#message-list,
+.travel-visited {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.message-entry {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+.message-entry:first-child {
+  padding-top: 0;
+}
+.message-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+  overflow-wrap: anywhere;
+}
+.message-meta time {
+  color: var(--muted);
+  font-size: 12px;
+}
+.message-content {
+  margin: 6px 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.message-entry-actions .btn {
+  min-height: 32px;
+  padding: 5px 9px;
+  font-size: 12px;
+}
+.travel-map-layout {
+  margin-top: 14px;
+}
+.travel-source {
+  margin: 12px 0 28px;
+  color: var(--muted);
+  font-size: 12px;
+}
+.travel-map-panel {
+  min-width: 0;
+}
+.travel-map-panel h3 {
+  margin: 0 0 5px;
+  font: 500 20px/1.3 var(--serif);
+}
+.travel-map {
+  display: block;
+  width: 100%;
+  height: clamp(150px, 24vw, 285px);
+  margin: 0 0 10px;
+  overflow: visible;
+}
+.travel-map path {
+  fill: #e6dde9;
+  fill-rule: evenodd;
+  stroke: var(--paper);
+  stroke-width: .68px;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+  cursor: pointer;
+}
+.travel-map path:hover {
+  fill: #cab1c8;
+}
+.travel-map path.is-visited {
+  fill: var(--accent);
+}
+.travel-map path.is-visited:hover {
+  fill: var(--accent-dark);
+}
+.travel-select {
+  flex: 1 1 150px;
+  min-height: 43px;
+  width: auto;
+}
+.travel-toggle:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+.travel-visited {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 8px;
+  margin-top: 8px;
+}
+.travel-visited li {
+  padding: 2px 8px;
+  border-radius: 7px;
+  background: var(--soft);
+  color: var(--accent-dark);
+  font-size: 12px;
+}
+@media (max-width: 700px) {
+  .message-board-layout,
+  .travel-map-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .travel-map {
+    height: clamp(150px, 56vw, 270px);
+  }
+  .travel-map-panel + .travel-map-panel {
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
   }
 }

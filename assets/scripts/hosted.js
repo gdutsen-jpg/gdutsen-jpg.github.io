@@ -7,10 +7,14 @@
     'assets/scripts/app.js',
     'assets/scripts/daylight-theme.js',
     'assets/scripts/weekend-wheel.js',
+    'assets/scripts/message-board.js',
+    'assets/maps/travel-map-data.js',
+    'assets/scripts/travel-maps.js',
   ];
   const styleFile = 'assets/styles/site.css';
   const fontFile = 'assets/fonts/gomoku-pixel.woff2';
   const licenseFile = 'assets/fonts/OFL.txt';
+  const pageTemplate = document.documentElement.outerHTML;
   const wrap = document.querySelector('.wrap');
   wrap.inert = true;
 
@@ -61,8 +65,8 @@
     return globalThis.AlbumCore.validateAlbum({ ...source, entries });
   }
 
-  globalThis.buildAlbumStandaloneDocument = async function (originalHTML) {
-    const copy = new DOMParser().parseFromString(originalHTML, 'text/html');
+  globalThis.buildAlbumStandaloneDocument = async function () {
+    const copy = new DOMParser().parseFromString(pageTemplate, 'text/html');
     const cover = copy.getElementById('first-meeting-cover').content.querySelector('img');
     const images = [...copy.querySelectorAll('img[src]'), cover];
     const icon = copy.querySelector('link[rel="icon"]');

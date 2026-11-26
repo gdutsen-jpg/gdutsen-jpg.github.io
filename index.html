@@ -54,7 +54,7 @@
   </div>
 <div class="toolbar"><div class="filters" role="group" aria-label="Filter memories by category"><button class="chip active" data-filter="全部" aria-pressed="true">All</button><button class="chip" data-filter="日常" aria-pressed="false">Daily</button><button class="chip" data-filter="约会" aria-pressed="false">Dates</button><button class="chip" data-filter="旅行" aria-pressed="false">Trips</button><button class="chip" data-filter="纪念日" aria-pressed="false">Anniversaries</button><button class="chip" data-filter="心动" aria-pressed="false">Little Sparks</button><button class="chip" data-filter="收藏" aria-pressed="false">♡ Favorites</button><button class="category-language" id="category-language-toggle" type="button" aria-pressed="false" aria-label="Show categories in Chinese"><span class="category-language-zh" lang="zh-Hans" aria-hidden="true">中</span><span class="category-language-divider" aria-hidden="true"> / </span><span class="category-language-en" lang="en" aria-hidden="true">EN</span></button></div><div class="tools"><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><input type="search" id="search" placeholder="Find a memory…" aria-label="Search titles, stories, and places"></label><select id="sort-order" aria-label="Sort by date"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div></div>
 <div id="records" class="content" role="tabpanel" aria-labelledby="wall-tab"><div class="empty"><svg class="icon"><use href="#i-photo"/></svg><h3>Your first memory starts here.</h3><p>A photo, a feeling, a day you want to remember.</p><button class="btn primary" data-action="new"><svg class="icon"><use href="#i-plus"/></svg>Add our first memory</button></div></div></section>
-<section class="weekend-wheel" id="weekend-wheel" aria-labelledby="weekend-title">
+<section class="weekend-wheel album-module" id="weekend-wheel" aria-labelledby="weekend-title">
   <h2 id="weekend-title">Weekend wheel</h2>
   <div class="weekend-panel">
     <div class="weekend-play">
@@ -81,6 +81,57 @@
     </div>
   </div>
 </section>
+<section class="album-module" id="message-board" aria-labelledby="message-title">
+  <h2 id="message-title">Message board</h2>
+  <div class="message-board-layout">
+    <form id="message-form">
+      <label for="message-name">Name <small>(optional)</small></label>
+      <input id="message-name" type="text" maxlength="30" autocomplete="nickname">
+      <label for="message-text">Message</label>
+      <textarea id="message-text" rows="3" maxlength="500" required></textarea>
+      <div class="message-form-buttons">
+        <button id="message-submit" type="submit" class="btn primary">Post message</button>
+        <button id="message-cancel" type="button" class="btn ghost" hidden>Cancel</button>
+      </div>
+      <p id="message-status" role="status" aria-atomic="true"></p>
+    </form>
+    <div class="message-feed">
+      <p id="message-empty">No messages yet.</p>
+      <ul id="message-list"></ul>
+    </div>
+  </div>
+</section>
+<section class="album-module" id="travel-maps" aria-labelledby="travel-title">
+  <h2 id="travel-title">Places we've been</h2>
+  <p class="travel-instructions">Click a place on the map or choose it from the list.</p>
+  <div class="travel-map-layout">
+    <section class="travel-map-panel" data-map="world" aria-labelledby="travel-world-title">
+      <h3 id="travel-world-title">World map</h3>
+      <svg class="travel-map" aria-hidden="true"></svg>
+      <div class="travel-controls">
+        <select class="travel-select" aria-label="Country or region">
+          <option value="">Country or region</option>
+        </select>
+        <button type="button" class="btn ghost travel-toggle" disabled>Mark visited</button>
+      </div>
+      <p class="travel-summary" role="status" aria-atomic="true"></p>
+      <ul class="travel-visited" aria-label="Visited countries and regions"></ul>
+    </section>
+    <section class="travel-map-panel" data-map="china" aria-labelledby="travel-china-title">
+      <h3 id="travel-china-title">China map</h3>
+      <svg class="travel-map" aria-hidden="true"></svg>
+      <div class="travel-controls">
+        <select class="travel-select" aria-label="Provincial-level region">
+          <option value="">Province or region</option>
+        </select>
+        <button type="button" class="btn ghost travel-toggle" disabled>Mark visited</button>
+      </div>
+      <p class="travel-summary" role="status" aria-atomic="true"></p>
+      <ul class="travel-visited" aria-label="Visited provinces and regions"></ul>
+    </section>
+  </div>
+  <p class="travel-source"><a href="https://www.naturalearthdata.com/">Map data · Natural Earth</a></p>
+</section>
 </main><footer class="footer"><span>A little love, one memory at a time. <span aria-hidden="true">♡</span></span><span class="save-status" id="save-status"><svg class="icon"><use href="#i-check"/></svg><span>Stored on this computer · Back up regularly</span></span><span class="footer-right"><button id="help-button">Help & saving</button></span></footer></div>
 <dialog id="entry-dialog" aria-labelledby="entry-dialog-title"><form id="entry-form"><div class="modal-head"><h2 id="entry-dialog-title">Add a memory</h2><button type="button" class="icon-btn" data-close="entry-dialog" aria-label="Close memory editor"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="modal-body"><div class="field"><label for="entry-title">Give this memory a name<span class="optional">Optional</span></label><input id="entry-title" maxlength="100" placeholder="For example: That evening we watched the sunset" autocomplete="off"></div><div class="field-row"><div class="field"><label for="entry-date">Date</label><input id="entry-date" type="date" required min="1900-01-01" max="9999-12-31"></div><div class="field"><label for="entry-category">Category</label><select id="entry-category"><option value="日常">Daily</option><option value="约会">Dates</option><option value="旅行">Trips</option><option value="纪念日">Anniversaries</option><option value="心动">Little Sparks</option></select></div></div><div class="field"><label for="entry-story">Words to remember<span class="optional">Optional</span></label><textarea id="entry-story" maxlength="10000" placeholder="What happened that day? How did it feel?"></textarea></div><div class="field"><label for="entry-location">Place<span class="optional">Optional</span></label><input id="entry-location" maxlength="150" placeholder="A city, a little cafe, or our home" autocomplete="off"></div><div class="field"><span class="field-label" id="photo-upload-label">Photos from that day<span class="optional">Optional · Up to 40 per memory</span></span><label class="dropzone" id="dropzone" for="photo-input" tabindex="0"><svg class="icon"><use href="#i-photo"/></svg><span>Choose photos or drag them here</span><small>JPG, PNG, WebP & more · Up to 25 MB each</small></label><input type="file" id="photo-input" accept="image/jpeg,image/png,image/webp,image/gif,image/bmp,image/avif" multiple hidden aria-labelledby="photo-upload-label"><div id="upload-thumbs" class="upload-thumbs"></div><p class="hint">Photos are saved as still-image copies, up to 2400 px on the longest side. Your original files stay unchanged.</p><div id="upload-status" class="form-message" role="status"></div></div><label class="check-label"><input type="checkbox" id="entry-favorite">Mark this special moment as a favorite</label><div id="entry-message" class="form-message" role="alert"></div></div><div class="modal-foot"><button class="btn" type="button" data-close="entry-dialog">Cancel</button><button class="btn primary" type="submit" id="save-entry">Save memory</button></div></form></dialog>
 <dialog id="settings-dialog" aria-labelledby="settings-title"><form id="settings-form"><div class="modal-head"><h2 id="settings-title">About us</h2><button type="button" class="icon-btn" data-close="settings-dialog" aria-label="Close settings"><svg class="icon"><use href="#i-close"/></svg></button></div><div class="modal-body"><p class="dialog-intro">Make this memory book your own. You can leave everything blank for now.</p><div class="field-row"><div class="field"><label for="name-one">Your nickname</label><input id="name-one" maxlength="20" placeholder="You" autocomplete="off"></div><div class="field"><label for="name-two">Your partner’s nickname</label><input id="name-two" maxlength="20" placeholder="Your partner" autocomplete="off"></div></div><div class="field"><label for="contact-date">Contact <span class="optional">Optional</span></label><input type="date" id="contact-date" min="1900-01-01" max="9999-12-31"><small>The day we first started talking. Its date and day count appear beside First met, with the starting date counted as day 1.</small></div><div class="field"><label for="first-met-date">First met <span class="optional">Optional</span></label><input type="date" id="first-met-date" min="1900-01-01" max="9999-12-31"><small>Our first in-person meeting, kept separately from Contact and Together.</small></div><div class="field"><label for="start-date">Together <span class="optional">Optional</span></label><input type="date" id="start-date" min="1900-01-01" max="9999-12-31"><small>The day we officially became a couple. This date drives the main Together counter, with the starting date counted as day 1. Leave it blank until the date is set. Anniversaries use this date each year; February 29 is observed on February 28 in other years.</small></div><div class="field"><label for="couple-message">A note for our homepage<span class="optional">Optional</span></label><textarea id="couple-message" rows="3" maxlength="200" placeholder="Leave blank to display the flower names."></textarea></div><div id="settings-message" class="form-message" role="alert"></div></div><div class="modal-foot"><button type="button" class="btn" data-close="settings-dialog">Cancel</button><button type="submit" class="btn primary" id="save-settings">Save our settings</button></div></form></dialog>
@@ -98,4 +149,7 @@
 <script src="assets/scripts/hosted.js" defer></script>
 <script src="assets/scripts/daylight-theme.js" defer></script>
 <script src="assets/scripts/weekend-wheel.js" defer></script>
+<script src="assets/scripts/message-board.js" defer></script>
+<script src="assets/maps/travel-map-data.js" defer></script>
+<script src="assets/scripts/travel-maps.js" defer></script>
 </body></html>
