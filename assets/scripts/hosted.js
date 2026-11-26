@@ -64,6 +64,8 @@
     const copy = new DOMParser().parseFromString(originalHTML, 'text/html');
     const cover = copy.getElementById('first-meeting-cover').content.querySelector('img');
     const images = [...copy.querySelectorAll('img[src]'), cover];
+    const icon = copy.querySelector('link[rel="icon"]');
+    const iconImage = icon && images.find(image => image.getAttribute('src') === icon.getAttribute('href'));
     const [css, font, license, scripts] = await Promise.all([
       readText(styleFile),
       readDataUrl(fontFile, 'font/woff2'),
@@ -81,6 +83,7 @@
     if (!css.includes('../fonts/gomoku-pixel.woff2') || /<\/style/i.test(css)) {
       throw new Error('The album stylesheet could not be copied.');
     }
+    if (iconImage) icon.setAttribute('href', iconImage.getAttribute('src'));
     const style = copy.createElement('style');
     style.textContent = css.replaceAll('../fonts/gomoku-pixel.woff2', font);
     copy.querySelector(`link[rel="stylesheet"][href="${styleFile}"]`).replaceWith(style);

@@ -149,3 +149,8 @@ body {
 @media (max-width: 1080px) {
   #hero-title[lang="zh-Hans"] { font-size: 36px; }
 }
+
+#hero-title em { white-space: nowrap; }
+@media (max-width: 400px) {
+  #hero-title[lang="zh-Hans"] { font-size: clamp(26px, 11cqw, 36px); }
+}
