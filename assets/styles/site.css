@@ -159,3 +159,120 @@ body {
 @media (max-width: 350px) {
   #brand-title { font-size: 13px; }
 }
+
+.weekend-wheel {
+  margin: 52px 0 40px;
+}
+.weekend-wheel h2 {
+  margin: 0 0 16px;
+  font: 500 27px/1.25 var(--serif);
+}
+.weekend-panel {
+  display: grid;
+  grid-template-columns: minmax(220px, 340px) minmax(220px, 400px);
+  justify-content: center;
+  align-items: center;
+  gap: clamp(22px, 5vw, 60px);
+  padding: clamp(20px, 4vw, 42px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--paper);
+}
+.weekend-play {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.weekend-dial {
+  position: relative;
+  width: min(100%, 300px);
+  aspect-ratio: 1;
+  margin: 8px 0 16px;
+}
+#weekend-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line), 0 8px 24px #3d31411a;
+}
+.weekend-pointer {
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  width: 20px;
+  height: 23px;
+  transform: translateX(-50%);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  background: var(--accent-dark);
+  pointer-events: none;
+}
+.weekend-hub {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 27px;
+  height: 27px;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--accent);
+  border-radius: 50%;
+  background: var(--paper);
+  pointer-events: none;
+}
+#weekend-spin:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+#weekend-result {
+  width: 100%;
+  min-height: 1.5em;
+  margin: 12px 0 0;
+  color: var(--accent-dark);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+.weekend-options {
+  min-width: 0;
+}
+.weekend-options label {
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+}
+#weekend-instructions {
+  margin: 4px 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+}
+#weekend-activities {
+  display: block;
+  width: 100%;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--bg);
+  color: var(--ink);
+  font: 14px/1.65 var(--sans);
+  resize: vertical;
+}
+#weekend-save {
+  display: block;
+  min-height: 1.4em;
+  margin-top: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+@media (max-width: 680px) {
+  .weekend-wheel {
+    margin-top: 36px;
+  }
+  .weekend-panel {
+    grid-template-columns: minmax(0, 460px);
+  }
+  .weekend-dial {
+    width: min(100%, 270px);
+  }
+}

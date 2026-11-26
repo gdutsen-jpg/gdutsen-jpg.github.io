@@ -6,6 +6,7 @@
     'assets/scripts/core.js',
     'assets/scripts/app.js',
     'assets/scripts/daylight-theme.js',
+    'assets/scripts/weekend-wheel.js',
   ];
   const styleFile = 'assets/styles/site.css';
   const fontFile = 'assets/fonts/gomoku-pixel.woff2';
