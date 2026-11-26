@@ -154,3 +154,8 @@ body {
 @media (max-width: 400px) {
   #hero-title[lang="zh-Hans"] { font-size: clamp(26px, 11cqw, 36px); }
 }
+
+.brand-title-ending { white-space: nowrap; }
+@media (max-width: 350px) {
+  #brand-title { font-size: 13px; }
+}
