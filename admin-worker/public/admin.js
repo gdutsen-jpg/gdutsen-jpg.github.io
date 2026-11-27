@@ -5,6 +5,7 @@ const PHOTO_SIZE_LIMIT = 1024 * 1024;
 const SOURCE_SIZE_LIMIT = 25 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 const REPOSITORY = "https://github.com/gdutsen-jpg/gdutsen-jpg.github.io";
+const MESSAGE_WALL = "留言墙";
 const WHEELS = {
   activities: { label: "活动", example: "周末野餐" },
   cuisines: { label: "菜系", example: "徽菜" }
@@ -35,12 +36,16 @@ const wheelRemoveDialog = document.getElementById("wheel-remove-dialog");
 const wheelRemoveTitle = document.getElementById("wheel-remove-title");
 const wheelRemoveDetail = document.getElementById("wheel-remove-detail");
 const memoryForm = document.getElementById("memory-form");
+const memoryCategory = memoryForm.elements.category;
+const memoryStory = memoryForm.elements.story;
+const memoryStoryNote = document.getElementById("memory-story-note");
 const newFields = document.getElementById("new-fields");
 const existingFields = document.getElementById("existing-fields");
 const memoryChoice = document.getElementById("memory-choice");
 const memoryStatus = document.getElementById("memory-status");
 const saveMemory = document.getElementById("save-memory");
 const photoInput = document.getElementById("photo-files");
+const photoHelp = document.getElementById("photo-help");
 const photoStatus = document.getElementById("photo-status");
 const photoList = document.getElementById("photo-list");
 const queueCoverPicker = document.getElementById("queue-cover-picker");
@@ -139,6 +144,7 @@ function selectedMemory() {
 function syncControls() {
   const locked = editorLocked();
   const existing = memoryForm.elements.mode.value === "existing";
+  const messageWall = !existing && memoryCategory.value === MESSAGE_WALL;
   wheelPicker.disabled = locked;
   const wheelLocked = locked || !Array.isArray(content?.[selectedWheel]);
   for (const field of wheelOptionForm.elements) {
@@ -167,7 +173,10 @@ function syncControls() {
   newFields.hidden = existing;
   existingFields.hidden = !existing;
   memoryChoice.required = existing;
-  saveMemory.textContent = pendingPublication ? "重试发布" : (existing ? "发布照片" : "发布回忆");
+  memoryStoryNote.textContent = messageWall ? "无照片时必填" : "选填";
+  photoHelp.textContent = messageWall ? "照片选填，可一次选择多张。" : "可一次选择多张照片，网页会自动压缩。";
+  const action = existing ? "发布照片" : messageWall ? "发布留言" : "发布回忆";
+  saveMemory.textContent = pendingPublication ? "重试发布" : action;
   const mapsLocked = visitMapEditor?.setLocked(locked || Boolean(pendingVisitSave));
   const visitCount = (pendingVisitSave?.changes ?? visitMapEditor?.changes())?.length ?? 0;
   saveVisited.disabled = locked || !visitCount || (!pendingVisitSave && mapsLocked);
@@ -567,11 +576,6 @@ async function publishMemory(event) {
   if (editorLocked()) {
     return;
   }
-  if (!stagedPhotos.length) {
-    setStatus(memoryStatus, "请先选择一张照片。", { error: true });
-    photoInput.focus();
-    return;
-  }
   const fields = new FormData(memoryForm);
   const details = pendingPublication ?? (fields.get("mode") === "existing"
     ? { entryId: fields.get("entryId") }
@@ -582,6 +586,18 @@ async function publishMemory(event) {
       story: fields.get("story"),
       location: fields.get("location").trim()
     });
+  if (!stagedPhotos.length) {
+    if (details.category !== MESSAGE_WALL) {
+      setStatus(memoryStatus, "请先选择一张照片。", { error: true });
+      photoInput.focus();
+      return;
+    }
+    if (!details.story.trim()) {
+      setStatus(memoryStatus, "只发布文字时，请先填写想记下的话。", { error: true });
+      memoryStory.focus();
+      return;
+    }
+  }
   saving = true;
   syncControls();
   let sendingPublication = false;
@@ -602,7 +618,10 @@ async function publishMemory(event) {
         pendingPublication.coverPhotoId = cover.stagedId;
       }
     }
-    setStatus(memoryStatus, `正在将 ${stagedPhotos.length} 张照片提交到 GitHub…`);
+    const submitting = stagedPhotos.length
+      ? `正在将 ${stagedPhotos.length} 张照片提交到 GitHub…`
+      : "正在将留言提交到 GitHub…";
+    setStatus(memoryStatus, submitting);
     sendingPublication = true;
     const result = await save("/api/memories", pendingPublication, null, true);
     if (!pendingPublication.entryId) {
@@ -769,6 +788,7 @@ memoryForm.querySelectorAll('input[name="mode"]').forEach((radio) => {
   radio.addEventListener("change", updateMemoryDestination);
 });
 memoryChoice.addEventListener("change", updateMemoryDestination);
+memoryCategory.addEventListener("change", updateMemoryDestination);
 photoInput.addEventListener("change", selectPhotos);
 queueCoverPicker.querySelector('input[value=""]').addEventListener("change", () => {
   queuedCoverId = "";

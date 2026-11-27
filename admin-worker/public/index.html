@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/admin-maps.css">
   <script src="/travel-map-data.js" defer></script>
   <script src="/admin-maps.js" defer></script>
-  <script src="/admin.js" defer></script>
+  <script src="/admin.js?v=20261127-message-wall" defer></script>
 </head>
 <body>
   <header class="site-header">
@@ -95,7 +95,7 @@
             </div>
             <label>标题 <span class="optional">选填</span><input type="text" name="title" maxlength="100"></label>
             <label>地点 <span class="optional">选填</span><input type="text" name="location" maxlength="150"></label>
-            <label>想记下的话 <span class="optional">选填</span><textarea name="story" rows="3" maxlength="10000"></textarea></label>
+            <label>想记下的话 <span class="optional" id="memory-story-note">选填</span><textarea name="story" rows="3" maxlength="10000"></textarea></label>
           </div>
           <div class="upload">
             <div class="photo-picker">

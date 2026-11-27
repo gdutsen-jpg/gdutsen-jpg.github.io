@@ -451,7 +451,11 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
     const target = memoryTarget(input);
     const coverInput = input.coverPhotoId ?? null;
     const coverPhotoId = coverInput === null ? null : identifier(coverInput, '封面照片编号');
-    if (!Array.isArray(stagedPhotos) || !stagedPhotos.length) throw error(422, '请至少选择一张照片。');
+    if (!Array.isArray(stagedPhotos)) throw error(422, '请选择要发布的照片。');
+    if (!stagedPhotos.length) {
+      if (target.newEntry?.category !== '留言墙') throw error(422, '请至少选择一张照片。');
+      if (!target.newEntry.story.trim()) throw error(422, '请填写留言内容。');
+    }
     const candidates = stagedPhotos.map((candidate) => {
       const { photo, blobSha } = inputRecord(candidate);
       const { id, name, file } = inputRecord(photo);
@@ -519,12 +523,12 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       }
 
       if (coverPhotoId && !selectedId) throw error(422, '封面必须是这条回忆中的照片。');
-      if (entry.photos.length === beforeCount && (!selectedId || selectedId === previousCover)) return [];
+      if (existing && entry.photos.length === beforeCount && (!selectedId || selectedId === previousCover)) return [];
       if (selectedId) entry.coverPhotoId = selectedId;
       if (!existing) album.entries.push(entry);
       files.push(albumChange(album, entry, operationId));
       return files;
-    }, 'Add memory photos from album admin\n\nOperation: ' + operationId);
+    }, (candidates.length ? 'Add memory photos' : 'Publish a message') + ' from album admin\n\nOperation: ' + operationId);
     return { ...result, entryId: targetId };
   }
 

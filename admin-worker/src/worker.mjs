@@ -136,9 +136,10 @@ async function readJson(request, maxBytes = MAX_REQUEST_BYTES) {
 }
 
 async function readPhotoReceipts(env, receipts) {
-  if (!Array.isArray(receipts) || !receipts.length || receipts.some((receipt) => typeof receipt !== 'string')) {
+  if (!Array.isArray(receipts) || receipts.some((receipt) => typeof receipt !== 'string')) {
     throw new RequestError(422, '请选择要发布的照片。');
   }
+  if (!receipts.length) return [];
   const key = await crypto.subtle.importKey('raw', decode(env.SESSION_KEY), 'AES-GCM', false, ['decrypt']);
   const staged = await Promise.all(receipts.map((receipt) => unseal(env, receipt, 'photo', key)));
   if (staged.some((upload) => !upload)) {
