@@ -12,6 +12,30 @@
     [24, ...overnight],
   ];
 
+  const bar = document.getElementById('daylight-bar');
+  const progress = document.getElementById('daylight-progress');
+  const localTime = document.getElementById('daylight-time');
+
+  if (bar) {
+    const stops = palette.map(([hour, , tint]) => (
+      'rgb(' + tint.join(', ') + ') ' + (hour / 24 * 100).toFixed(4) + '%'
+    ));
+    bar.style.setProperty('--daylight-cycle', 'linear-gradient(to right, ' + stops.join(', ') + ')');
+  }
+
+  function showDaylightProgress(now, hour) {
+    if (!bar || !progress || !localTime) return;
+    const percentage = hour / 24 * 100;
+    const clock = [now.getHours(), now.getMinutes()].map(value => String(value).padStart(2, '0')).join(':');
+    bar.style.setProperty('--daylight-position', percentage.toFixed(4) + '%');
+    progress.setAttribute('aria-valuenow', String(Math.round(percentage)));
+    progress.setAttribute('aria-valuetext', clock + ' local time');
+    if (clock !== localTime.textContent) {
+      localTime.dateTime = clock;
+      localTime.textContent = clock;
+    }
+  }
+
   function colorBetween(from, to, fraction) {
     const channels = from.map((value, index) => (
       value + (to[index] - value) * fraction
@@ -28,6 +52,7 @@
     const fraction = (hour - start) / (end - start);
     root.style.setProperty('--daylight-paper', colorBetween(paper, nextPaper, fraction));
     root.style.setProperty('--daylight-tint', colorBetween(tint, nextTint, fraction));
+    showDaylightProgress(now, hour);
   }
 
   let timer;

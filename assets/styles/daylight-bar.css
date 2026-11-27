@@ -1,0 +1,75 @@
+.daylight-bar {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: .8rem;
+  align-items: start;
+  width: min(100%, 30rem);
+  margin: .8rem 0 0 auto;
+  color: var(--accent-dark);
+  font-size: .75rem;
+  line-height: 1.35;
+}
+
+.daylight-bar-meta {
+  display: flex;
+  align-items: baseline;
+  gap: .5rem;
+  white-space: nowrap;
+}
+
+.daylight-bar-meta h2 {
+  margin: 0;
+  font-size: inherit;
+  font-weight: 400;
+}
+
+.daylight-bar-meta time {
+  min-width: 5ch;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.daylight-progress {
+  position: relative;
+  height: .48rem;
+  margin: .23rem .35rem 0;
+  border-radius: 999px;
+  background-color: var(--soft);
+  background-image: var(--daylight-cycle, none);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.daylight-progress[aria-valuenow]::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: clamp(0%, var(--daylight-position, 0%), 100%);
+  width: .62rem;
+  height: .62rem;
+  box-sizing: border-box;
+  transform: translate(-50%, -50%);
+  border: 2px solid var(--paper);
+  border-radius: 50%;
+  background: var(--accent-dark);
+  box-shadow: 0 0 0 1px var(--accent-dark);
+}
+
+.daylight-ticks {
+  display: flex;
+  justify-content: space-between;
+  margin-top: .25rem;
+  font-size: .6875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 520px) {
+  .daylight-bar {
+    gap: .6rem;
+    margin-top: .65rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .daylight-progress { border: 1px solid CanvasText; }
+  .daylight-progress[aria-valuenow]::after { border-color: CanvasText; background: Canvas; }
+}

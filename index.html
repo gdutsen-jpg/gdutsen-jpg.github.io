@@ -7,8 +7,9 @@
 <meta name="color-scheme" content="light">
 <title>寻找我的玫瑰花</title>
 <link rel="icon" type="image/png" sizes="216x216" href="assets/art/botanical-logo.png">
-<link rel="stylesheet" href="assets/styles/site.css?v=20261127-stats-dm-sans">
+<link rel="stylesheet" href="assets/styles/site.css?v=20261127-daylight-accents">
 <link rel="stylesheet" href="assets/styles/wheels.css?v=20261127-two-wheels">
+<link rel="stylesheet" href="assets/styles/daylight-bar.css?v=20261127-daylight-progress">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs>
@@ -35,6 +36,16 @@
 <header class="topbar"><a class="brand" href="#" aria-labelledby="brand-title"><span class="brand-icon botanical-logo" aria-hidden="true"><img src="assets/art/botanical-logo.png" alt="" width="216" height="216"></span><span><span class="brand-title" id="brand-title" lang="zh-Hans">「金铁若有花语,<span class="brand-title-ending">其意亘古不渝」</span></span></span></a><div class="top-actions"><button class="btn" id="backup-button" aria-label="Save & backup"><svg class="icon"><use href="#i-download"/></svg><span class="label">Save & backup</span></button></div></header>
 <div id="storage-notice" class="notice" hidden role="status"></div>
 <main>
+<section class="daylight-bar" id="daylight-bar" aria-labelledby="daylight-title">
+  <div class="daylight-bar-meta">
+    <h2 id="daylight-title">Daylight</h2>
+    <time id="daylight-time" datetime="00:00">—:—</time>
+  </div>
+  <div class="daylight-scale">
+    <div class="daylight-progress" id="daylight-progress" role="progressbar" aria-label="Elapsed time today" aria-valuemin="0" aria-valuemax="100"></div>
+    <div class="daylight-ticks" aria-hidden="true"><span>00</span><span>06</span><span>12</span><span>18</span><span>24</span></div>
+  </div>
+</section>
 <section class="hero" aria-labelledby="hero-title"><div><div class="eyebrow" id="couple-eyebrow" lang="zh-Hans">在森林里</div><h1 id="hero-title" lang="zh-Hans">寻找我的<em>“玫瑰花”</em></h1><p class="hero-description hero-flower-names" id="hero-description" lang="zh-Hans">原来是白芷和琼花</p><div class="hero-actions"><button class="btn primary" id="browse-button">Browse our story</button></div></div>
 <figure class="hero-illustration">
 <div class="hero-art botanical-art" aria-hidden="true"><img src="assets/art/hero-botanical.png" alt="" width="1536" height="1024" decoding="async"></div>
@@ -140,8 +151,8 @@
 <template id="first-meeting-cover"><img src="assets/art/first-meeting-cover.png" alt="" width="720" height="720"></template>
 <template id="embedded-font-license"><pre></pre></template>
 <script src="assets/scripts/core.js?v=20261127-cover" defer></script>
-<script src="assets/scripts/hosted.js?v=20261127-two-wheels" defer></script>
-<script src="assets/scripts/daylight-theme.js" defer></script>
+<script src="assets/scripts/hosted.js?v=20261127-daylight-progress" defer></script>
+<script src="assets/scripts/daylight-theme.js?v=20261127-daylight-progress" defer></script>
 <script src="data/site-content.js?v=20261127-meat-types" defer></script>
 <script src="assets/scripts/browser-backup.js" defer></script>
 <script src="assets/scripts/weekend-wheel.js?v=20261127-two-wheels" defer></script>

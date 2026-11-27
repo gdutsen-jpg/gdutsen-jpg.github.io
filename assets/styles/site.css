@@ -66,12 +66,34 @@ dialog{padding:0;border:1px solid var(--line);border-radius:17px;box-shadow:0 28
 
 :root {
   --bg: var(--daylight-paper, #fcfafc);
+  --accent-line: #ba9bb2;
+  --accent-shadow: #7749641c;
+  --map-land: #e6dde9;
+  --map-hover: #cab1c8;
 }
 
 @supports (color: color-mix(in srgb, white, black)) {
   :root {
-    --soft: color-mix(in srgb, #f4ecf2 75%, var(--daylight-tint, #e9ddef));
-    --lavender: color-mix(in srgb, #eee9f5 78%, var(--daylight-tint, #e9ddef));
+    --ink: color-mix(in srgb, #202322, var(--daylight-tint) 12%);
+    --muted: color-mix(in srgb, #252825, var(--daylight-tint) 35%);
+    --accent: color-mix(in srgb, #252925, var(--daylight-tint) 31%);
+    --accent-dark: color-mix(in srgb, #202422, var(--daylight-tint) 23%);
+    --line: color-mix(in srgb, var(--daylight-paper), var(--daylight-tint) 56%);
+    --soft: color-mix(in srgb, var(--daylight-paper), var(--daylight-tint) 41%);
+    --lavender: color-mix(in srgb, var(--daylight-paper), var(--daylight-tint) 65%);
+    --accent-line: color-mix(in srgb, var(--daylight-tint), var(--accent) 38%);
+    --accent-shadow: color-mix(in srgb, var(--accent-dark) 11%, transparent);
+    --map-land: color-mix(in srgb, var(--daylight-paper), var(--daylight-tint) 86%);
+    --map-hover: color-mix(in srgb, var(--map-land), var(--accent) 35%);
+  }
+}
+
+@supports (color: oklch(from white .49 min(.094, calc(c * 2.55)) h)) {
+  :root {
+    --ink: oklch(from var(--daylight-tint) .31 calc(c * .85) h);
+    --muted: oklch(from var(--daylight-tint) .49 calc(c * 1.05) h);
+    --accent: oklch(from var(--daylight-tint) .49 min(.094, calc(c * 2.55)) h);
+    --accent-dark: oklch(from var(--daylight-tint) .39 min(.085, calc(c * 2.3)) h);
   }
 }
 
@@ -96,6 +118,71 @@ body {
     color-mix(in srgb, var(--daylight-tint, #e9ddef) 35%, transparent),
     transparent 72%
   );
+}
+
+.eyebrow::before {
+  background: var(--accent-line);
+}
+
+.hero-description.hero-flower-names {
+  color: var(--muted);
+}
+
+.btn.primary {
+  box-shadow: 0 4px 12px var(--accent-shadow);
+}
+
+:where(.topbar, main) .btn:hover,
+.category-language:hover {
+  background: var(--soft);
+  border-color: var(--accent-line);
+}
+
+:where(.topbar, main) .icon-btn:hover,
+.stat-icon {
+  background: var(--soft);
+}
+
+button:focus-visible,
+a:focus-visible,
+input,
+textarea,
+select {
+  outline-color: var(--accent);
+}
+
+.tabs {
+  background: var(--lavender);
+}
+
+.tab.active {
+  background: var(--paper);
+  color: var(--accent-dark);
+  box-shadow: 0 2px 5px var(--accent-shadow);
+}
+
+.category-language-divider,
+.search-box .icon {
+  color: var(--muted);
+}
+
+.year-heading,
+.empty .icon {
+  color: var(--accent);
+}
+
+.memory::before {
+  background: var(--accent-line);
+}
+
+.empty {
+  border-color: var(--accent-line);
+  background: linear-gradient(130deg, var(--paper), var(--soft));
+}
+
+.empty::before,
+.empty::after {
+  background: var(--lavender);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -301,7 +388,7 @@ body {
   overflow: visible;
 }
 .travel-map path {
-  fill: #e6dde9;
+  fill: var(--map-land);
   fill-rule: evenodd;
   stroke: var(--paper);
   stroke-width: .68px;
@@ -310,7 +397,7 @@ body {
   cursor: pointer;
 }
 .travel-map path:hover {
-  fill: #cab1c8;
+  fill: var(--map-hover);
 }
 .travel-map path.is-visited {
   fill: var(--accent);

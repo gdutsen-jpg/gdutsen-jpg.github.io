@@ -5,7 +5,7 @@
   const scriptFiles = [
     'assets/scripts/core.js?v=20261127-cover',
     'assets/scripts/app.js?v=20261127-cover',
-    'assets/scripts/daylight-theme.js',
+    'assets/scripts/daylight-theme.js?v=20261127-daylight-progress',
     'data/site-content.js?v=20261127-meat-types',
     'assets/scripts/browser-backup.js',
     'assets/scripts/weekend-wheel.js?v=20261127-two-wheels',
@@ -13,8 +13,9 @@
     'assets/scripts/travel-maps.js',
   ];
   const styleFiles = [
-    'assets/styles/site.css?v=20261127-stats-dm-sans',
+    'assets/styles/site.css?v=20261127-daylight-accents',
     'assets/styles/wheels.css?v=20261127-two-wheels',
+    'assets/styles/daylight-bar.css?v=20261127-daylight-progress',
   ];
   const fonts = [
     { file: 'gomoku-pixel.woff2', license: 'OFL.txt' },
