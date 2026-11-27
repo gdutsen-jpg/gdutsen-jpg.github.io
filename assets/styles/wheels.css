@@ -1,6 +1,6 @@
 .album-wheels {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0 clamp(1.25rem, 4vw, 3rem);
 }
 
@@ -12,27 +12,42 @@
   width: min(100%, 300px);
 }
 
-#cuisine-disc {
-  display: block;
+.weekend-disc-frame {
   width: 100%;
   height: 100%;
+  overflow: hidden;
   border-radius: 50%;
   box-shadow: 0 0 0 1px var(--line), 0 8px 24px #3d31411a;
 }
 
-#cuisine-spin:disabled {
+.weekend-disc-frame canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  box-shadow: none;
+}
+
+#cuisine-spin:disabled,
+#ingredient-spin:disabled {
   opacity: .55;
   cursor: not-allowed;
   transform: none;
 }
 
-#cuisine-result {
+#cuisine-result,
+#ingredient-result {
   width: 100%;
   min-height: 1.5em;
   margin: 12px 0 0;
   color: var(--accent-dark);
   font-size: 15px;
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 900px) {
+  .album-wheels {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 680px) {
@@ -46,11 +61,13 @@
     width: min(100%, 210px);
   }
 
-  .album-wheels #cuisine-wheel .weekend-dial {
+  .album-wheels #cuisine-wheel .weekend-dial,
+  .album-wheels #ingredient-wheel .weekend-dial {
     width: min(100%, 280px);
   }
 
-  #cuisine-spin {
+  #cuisine-spin,
+  #ingredient-spin {
     max-width: 100%;
     min-height: 35px;
     padding: 6px 9px;
@@ -58,7 +75,8 @@
     white-space: normal;
   }
 
-  #cuisine-result {
+  #cuisine-result,
+  #ingredient-result {
     margin-top: 7px;
     font-size: 13px;
   }

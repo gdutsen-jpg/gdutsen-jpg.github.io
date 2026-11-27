@@ -18,6 +18,14 @@
         '烧烤烤肉', '海鲜', '小吃简餐', '自助餐', '日式料理', '韩式料理', '东南亚菜', '西餐',
       ],
     },
+    ingredients: {
+      name: 'Ingredient wheel',
+      empty: 'No ingredients yet.',
+      fallback: [
+        '鸡腿', '鸡翅', '鸡胸肉', '鸭肉', '五花肉', '猪排骨',
+        '猪里脊', '牛腩', '牛腱子', '牛里脊', '羊腿肉', '羊排',
+      ],
+    },
   };
 
   function setupWheel(wheel) {

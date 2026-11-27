@@ -6,15 +6,15 @@
     'assets/scripts/core.js?v=20261127-cover',
     'assets/scripts/app.js?v=20261127-cover',
     'assets/scripts/daylight-theme.js',
-    'data/site-content.js?v=20261127-cuisine',
+    'data/site-content.js?v=20261127-ingredients',
     'assets/scripts/browser-backup.js',
-    'assets/scripts/weekend-wheel.js?v=20261127-cuisine',
+    'assets/scripts/weekend-wheel.js?v=20261127-ingredients',
     'assets/maps/travel-map-data.js',
     'assets/scripts/travel-maps.js',
   ];
   const styleFiles = [
     'assets/styles/site.css?v=20261127-stats-dm-sans',
-    'assets/styles/wheels.css?v=20261127-cuisine',
+    'assets/styles/wheels.css?v=20261127-ingredients',
   ];
   const fonts = [
     { file: 'gomoku-pixel.woff2', license: 'OFL.txt' },
