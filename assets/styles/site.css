@@ -256,6 +256,16 @@ select {
   margin: 0 0 16px;
   font: 400 24px/1.25 var(--serif);
 }
+
+.album-module > .album-wheels {
+  row-gap: 24px;
+}
+
+.weekend-wheel > h3 {
+  margin: 0 0 16px;
+  font: 400 18px/1.35 var(--serif);
+}
+
 .weekend-panel {
   display: grid;
   grid-template-columns: minmax(0, 300px);
@@ -366,7 +376,7 @@ select {
 .travel-easel {
   align-self: end;
   justify-self: end;
-  width: 100%;
+  width: calc(100% * 2 / 3);
   margin: 0;
 }
 
@@ -438,7 +448,7 @@ select {
     grid-template-columns: minmax(0, 1fr);
   }
   .travel-easel {
-    width: min(160px, 55%);
+    width: calc(min(160px, 55%) * 2 / 3);
   }
   .travel-map {
     height: clamp(150px, 56vw, 270px);

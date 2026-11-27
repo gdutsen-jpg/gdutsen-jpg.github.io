@@ -13,7 +13,7 @@
     'assets/scripts/travel-maps.js',
   ];
   const styleFiles = [
-    'assets/styles/site.css?v=20261127-flower-easel',
+    'assets/styles/site.css?v=20261127-small-easel',
     'assets/styles/wheels.css?v=20261127-two-wheels',
     'assets/styles/daylight-bar.css?v=20261127-daylight-progress',
   ];

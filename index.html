@@ -7,7 +7,7 @@
 <meta name="color-scheme" content="light">
 <title>寻找我的玫瑰花</title>
 <link rel="icon" type="image/png" sizes="216x216" href="assets/art/botanical-logo.png">
-<link rel="stylesheet" href="assets/styles/site.css?v=20261127-flower-easel">
+<link rel="stylesheet" href="assets/styles/site.css?v=20261127-small-easel">
 <link rel="stylesheet" href="assets/styles/wheels.css?v=20261127-two-wheels">
 <link rel="stylesheet" href="assets/styles/daylight-bar.css?v=20261127-daylight-progress">
 </head>
@@ -66,9 +66,11 @@
   </div>
 <div class="toolbar"><div class="filters" role="group" aria-label="Filter memories by category"><button class="chip active" data-filter="全部" aria-pressed="true">All</button><button class="chip" data-filter="日常" aria-pressed="false">Daily</button><button class="chip" data-filter="约会" aria-pressed="false">Dates</button><button class="chip" data-filter="旅行" aria-pressed="false">Trips</button><button class="chip" data-filter="纪念日" aria-pressed="false">Anniversaries</button><button class="chip" data-filter="心动" aria-pressed="false">Little Sparks</button><button class="chip" data-filter="收藏" aria-pressed="false">♡ Favorites</button><button class="category-language" id="category-language-toggle" type="button" aria-pressed="false" aria-label="Show categories in Chinese"><span class="category-language-zh" lang="zh-Hans" aria-hidden="true">中</span><span class="category-language-divider" aria-hidden="true"> / </span><span class="category-language-en" lang="en" aria-hidden="true">EN</span></button></div><div class="tools"><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><input type="search" id="search" placeholder="Find a memory…" aria-label="Search titles, stories, and places"></label><select id="sort-order" aria-label="Sort by date"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div></div>
 <div id="records" class="content" role="tabpanel" aria-labelledby="wall-tab"><div class="empty"><svg class="icon"><use href="#i-photo"/></svg><h3>No memories yet.</h3></div></div></section>
+<section class="album-module" aria-labelledby="wheels-title">
+  <h2 id="wheels-title">Spin the Wheel</h2>
 <div class="album-wheels">
-<section class="weekend-wheel album-module" id="weekend-wheel" data-wheel="activities" aria-labelledby="weekend-title">
-  <h2 id="weekend-title">Activity Wheel</h2>
+<section class="weekend-wheel" id="weekend-wheel" data-wheel="activities" aria-labelledby="weekend-title">
+  <h3 id="weekend-title">What Should We Do?</h3>
   <div class="weekend-panel">
     <div class="weekend-play">
       <div class="weekend-dial">
@@ -83,8 +85,8 @@
     </div>
   </div>
 </section>
-<section class="weekend-wheel album-module" id="cuisine-wheel" data-wheel="cuisines" aria-labelledby="cuisine-title">
-  <h2 id="cuisine-title">Cuisine Wheel</h2>
+<section class="weekend-wheel" id="cuisine-wheel" data-wheel="cuisines" aria-labelledby="cuisine-title">
+  <h3 id="cuisine-title">What Should We Eat?</h3>
   <div class="weekend-panel">
     <div class="weekend-play">
       <div class="weekend-dial">
@@ -100,6 +102,7 @@
   </div>
 </section>
 </div>
+</section>
 <section class="album-module" id="travel-maps" aria-labelledby="travel-title">
   <h2 id="travel-title">Places We&rsquo;ve Visited Together</h2>
   <p class="travel-instructions">Click a region to see its name and visit status.</p>
@@ -154,7 +157,7 @@
 <template id="first-meeting-cover"><img src="assets/art/first-meeting-cover.png" alt="" width="720" height="720"></template>
 <template id="embedded-font-license"><pre></pre></template>
 <script src="assets/scripts/core.js?v=20261127-cover" defer></script>
-<script src="assets/scripts/hosted.js?v=20261127-flower-easel" defer></script>
+<script src="assets/scripts/hosted.js?v=20261127-small-easel" defer></script>
 <script src="assets/scripts/daylight-theme.js?v=20261127-daylight-progress" defer></script>
 <script src="data/site-content.js?v=20261127-meat-types" defer></script>
 <script src="assets/scripts/browser-backup.js" defer></script>
