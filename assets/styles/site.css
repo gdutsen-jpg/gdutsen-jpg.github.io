@@ -358,9 +358,22 @@ select {
 
 .travel-map-layout {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: clamp(22px, 5vw, 60px);
+  grid-template-columns: repeat(2, minmax(0, 1fr)) clamp(130px, calc(20vw - 20px), 185px);
+  gap: clamp(16px, 3vw, 38px);
   margin-top: 14px;
+}
+
+.travel-easel {
+  align-self: end;
+  justify-self: end;
+  width: 100%;
+  margin: 0;
+}
+
+.travel-easel img {
+  display: block;
+  width: 100%;
+  height: auto;
 }
 .travel-instructions,
 .travel-summary {
@@ -423,6 +436,9 @@ select {
 @media (max-width: 700px) {
   .travel-map-layout {
     grid-template-columns: minmax(0, 1fr);
+  }
+  .travel-easel {
+    width: min(160px, 55%);
   }
   .travel-map {
     height: clamp(150px, 56vw, 270px);
