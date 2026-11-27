@@ -26,7 +26,7 @@
   <main class="shell">
     <div class="page-intro">
       <h1>相册管理</h1>
-      <p id="editor-intro" hidden>新增活动或上传回忆照片，提交后会随公开相册发布。</p>
+      <p id="editor-intro" hidden>管理转盘、回忆照片和旅行足迹，提交后会随公开相册发布。</p>
     </div>
 
     <div class="access" id="access">
@@ -42,19 +42,25 @@
     <noscript><p>请启用 JavaScript 后再使用相册管理。</p></noscript>
 
     <div id="editor" hidden>
-      <section class="editor-section" aria-labelledby="activities-heading">
+      <section class="editor-section" aria-labelledby="wheels-heading">
         <div class="section-heading">
-          <h2 id="activities-heading">活动转盘</h2>
-          <ul class="activities" id="activity-list" aria-label="转盘活动" hidden></ul>
-          <p class="field-help" id="activities-empty" hidden>转盘暂无活动。</p>
+          <h2 id="wheels-heading">转盘管理</h2>
+          <fieldset class="mode-group wheel-picker" id="wheel-picker" disabled>
+            <legend class="visually-hidden">选择要管理的转盘</legend>
+            <label><input type="radio" name="wheel" value="activities" aria-label="活动转盘" checked><span>活动</span></label>
+            <label><input type="radio" name="wheel" value="cuisines" aria-label="菜系转盘"><span>菜系</span></label>
+            <label><input type="radio" name="wheel" value="ingredients" aria-label="肉类食材转盘"><span>肉类食材</span></label>
+          </fieldset>
+          <ul class="wheel-options" id="wheel-options" aria-label="活动转盘选项" hidden></ul>
+          <p class="field-help" id="wheel-options-empty" hidden></p>
         </div>
-        <form id="activity-form">
-          <label for="activity-name">活动名称</label>
+        <form id="wheel-option-form">
+          <label for="wheel-option-name" id="wheel-option-label">活动名称</label>
           <div class="form-line">
-            <input id="activity-name" name="activity" type="text" maxlength="60" placeholder="例如，周末野餐" required>
-            <button class="button primary" type="submit">添加活动</button>
+            <input id="wheel-option-name" type="text" maxlength="60" placeholder="例如，周末野餐" required>
+            <button class="button primary" id="add-wheel-option" type="submit">添加活动</button>
           </div>
-          <p class="status" id="activity-status" role="status" aria-live="polite" hidden></p>
+          <p class="status" id="wheel-option-status" role="status" hidden></p>
         </form>
       </section>
 
@@ -167,10 +173,10 @@
       </section>
     </div>
   </main>
-  <dialog class="confirm-dialog" id="activity-remove-dialog" aria-labelledby="activity-remove-title" aria-describedby="activity-remove-detail">
+  <dialog class="confirm-dialog" id="wheel-remove-dialog" aria-labelledby="wheel-remove-title" aria-describedby="wheel-remove-detail">
     <form method="dialog">
-      <h2 id="activity-remove-title">删除活动</h2>
-      <p id="activity-remove-detail"></p>
+      <h2 id="wheel-remove-title">删除选项</h2>
+      <p id="wheel-remove-detail"></p>
       <div class="dialog-actions">
         <button class="button secondary" type="submit" value="cancel" autofocus>取消</button>
         <button class="button primary" type="submit" value="remove">确认删除</button>

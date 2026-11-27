@@ -7,6 +7,11 @@ const CATEGORIES = new Set(['日常', '约会', '旅行', '纪念日', '心动']
 const SHA = /^[a-f0-9]{40}$/;
 const PHOTO_PATH = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
 const REGION_FORMATS = { world: /^[A-Z]{3}$/, china: /^CN-[A-Z]{2}$/ };
+const WHEELS = {
+  activities: { label: '活动名称', commitName: 'activity' },
+  cuisines: { label: '菜系名称', commitName: 'cuisine' },
+  ingredients: { label: '食材名称', commitName: 'ingredient' },
+};
 const RAW_MEDIA_TYPE = 'application/vnd.github.raw+json';
 
 function error(status, message) {
@@ -157,6 +162,10 @@ function parseAlbum(source) {
   return album;
 }
 
+function wheelList(value) {
+  return Array.isArray(value) && value.every((option) => typeof option === 'string');
+}
+
 function parseContent(source) {
   const message = 'GitHub 上的转盘数据需要使用 JSON 格式。';
   const match = /^\s*globalThis\.GomokuPublishedContent\s*=\s*(\{[\s\S]*\})\s*;\s*$/.exec(source);
@@ -167,8 +176,9 @@ function parseContent(source) {
   } catch {
     throw error(502, message);
   }
-  if (!record(content) || !Array.isArray(content.activities) ||
-      !content.activities.every((activity) => typeof activity === 'string')) {
+  if (!record(content) || !wheelList(content.activities) ||
+      (content.cuisines !== undefined && !wheelList(content.cuisines)) ||
+      (content.ingredients !== undefined && !wheelList(content.ingredients))) {
     throw error(502, message);
   }
   return content;
@@ -209,7 +219,7 @@ function albumChange(album, entry, operationId) {
   return gitBlob(ALBUM_PATH, { content: `${JSON.stringify(album, null, 2)}\n` });
 }
 
-export function createGitHubStore({ token, repository, branch = 'main', fetcher = fetch, regionIds }) {
+export function createGitHubStore({ token, repository, branch = 'main', fetcher = fetch, regionIds, wheelDefaults }) {
   if (typeof token !== 'string' || !token || typeof repository !== 'string' ||
       !/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository) || typeof branch !== 'string' || !branch ||
       branch.split('/').some((part) => !part || part === '.' || part === '..')) {
@@ -218,6 +228,10 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
   const repoUrl = `https://api.github.com/repos/${repository}`;
   const branchPath = `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
   const regions = { world: regionSet(regionIds?.world), china: regionSet(regionIds?.china) };
+  const wheelFallback = {
+    cuisines: wheelList(wheelDefaults?.cuisines) ? wheelDefaults.cuisines : [],
+    ingredients: wheelList(wheelDefaults?.ingredients) ? wheelDefaults.ingredients : [],
+  };
 
   async function request(path, { method = 'GET', body, raw = false, conflict = false } = {}) {
     const headers = {
@@ -305,7 +319,8 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       readFile(ALBUM_PATH, head),
       readFile(CONTENT_PATH, head),
     ]);
-    const { activities, visited: configuredVisits } = parseContent(contentSource);
+    const { activities, cuisines = wheelFallback.cuisines, ingredients = wheelFallback.ingredients,
+      visited: configuredVisits } = parseContent(contentSource);
     const filterVisits = (map) => [...new Set(visitedList(configuredVisits, map))].filter((id) =>
       typeof id === 'string' && REGION_FORMATS[map].test(id) && (!regions[map] || regions[map].has(id)));
     const visited = { world: filterVisits('world'), china: filterVisits('china') };
@@ -324,32 +339,36 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       })),
     }));
     memories.sort((left, right) => right.date.localeCompare(left.date));
-    return { activities, memories, visited };
+    return { activities, cuisines, ingredients, memories, visited };
   }
 
-  async function changeActivity(input, action) {
-    const { operationId: operationInput, name: nameInput } = inputRecord(input);
+  async function changeWheelOptions(input) {
+    const { wheel, action, operationId: operationInput, name: nameInput } = inputRecord(input);
+    if (typeof wheel !== 'string' || !Object.hasOwn(WHEELS, wheel)) throw error(422, '请选择有效的转盘。');
+    if (action !== 'add' && action !== 'remove') throw error(422, '请选择有效的转盘操作。');
     const operationId = operationKey(operationInput);
-    const name = inputText(nameInput, { label: '活动名称', max: 60, required: true });
-    if (/[\r\n]/.test(name)) throw error(422, '活动名称请写在一行内。');
+    const { label, commitName } = WHEELS[wheel];
+    const name = inputText(nameInput, { label, max: 60, required: true });
+    if (/[\r\n]/.test(name)) throw error(422, `${label}请写在一行内。`);
 
-    const remove = action === 'Remove';
+    const remove = action === 'remove';
     return writeFiles(async (head) => {
       const content = parseContent(await readFile(CONTENT_PATH, head));
-      const otherActivities = content.activities.filter((activity) => activity.trim() !== name);
-      const exists = otherActivities.length !== content.activities.length;
+      const options = content[wheel] ?? wheelFallback[wheel];
+      const remaining = options.filter((option) => option.trim() !== name);
+      const exists = remaining.length !== options.length;
       if ((remove && !exists) || (!remove && exists)) return [];
-      content.activities = remove ? otherActivities : [...content.activities, name];
+      content[wheel] = remove ? remaining : [...options, name];
       return [siteContentChange(content)];
-    }, `${action} activity from album admin\n\nOperation: ${operationId}`);
+    }, `${remove ? 'Remove' : 'Add'} ${commitName} from album admin\n\nOperation: ${operationId}`);
   }
 
-  function addActivity(input) {
-    return changeActivity(input, 'Add');
+  async function addActivity(input) {
+    return changeWheelOptions({ ...inputRecord(input), wheel: 'activities', action: 'add' });
   }
 
-  function removeActivity(input) {
-    return changeActivity(input, 'Remove');
+  async function removeActivity(input) {
+    return changeWheelOptions({ ...inputRecord(input), wheel: 'activities', action: 'remove' });
   }
 
   async function updateVisited(input) {
@@ -528,5 +547,6 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
     }, `Change memory cover from album admin\n\nOperation: ${operationId}`);
   }
 
-  return { getContent, addActivity, removeActivity, updateVisited, stageMemoryPhoto, addMemoryPhotoBatch, addMemoryPhotos, setMemoryCover };
+  return { getContent, changeWheelOptions, addActivity, removeActivity, updateVisited,
+    stageMemoryPhoto, addMemoryPhotoBatch, addMemoryPhotos, setMemoryCover };
 }

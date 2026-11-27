@@ -57,7 +57,9 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
       assert.equal(url, 'https://api.github.com/user/installations/23/repositories');
       return Response.json({ total_count: repositories.length, repositories });
     },
-    makeStore: ({ token, repository, branch, regionIds }) => {
+    makeStore: ({ token, repository, branch, regionIds, wheelDefaults }) => {
+      assert.equal(wheelDefaults.ingredients.length, 12);
+      assert.equal(wheelDefaults.ingredients.includes('羊排'), true);
       assert.equal(regionIds.world.has('JPN'), true);
       assert.equal(regionIds.china.has('CN-GD'), true);
       assert.equal(token, 'ghu_test_bearer');
@@ -71,6 +73,7 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
         getContent: () => ({ activities: [], memories: [] }),
         addActivity: save,
         removeActivity: save,
+        changeWheelOptions: save,
         updateVisited: save,
         addMemoryPhotos: save,
         setMemoryCover: save,
@@ -164,6 +167,11 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   const remove = { name: activity.name, operationId: 'browser-remove-01' };
   assert.equal((await request(worker, '/api/activities/remove', makeWrite(base, JSON.stringify(remove)))).status, 200);
   assert.deepEqual(mutations.at(-1), remove);
+  const wheelChange = { wheel: 'cuisines', action: 'add', name: '家常菜', operationId: 'browser-wheel-test1' };
+  assert.equal((await request(worker, '/api/wheel-options', makeWrite('https://elsewhere.example', JSON.stringify(wheelChange)))).status, 403);
+  assert.equal((await request(worker, '/api/wheel-options', { method: 'POST', headers: { Origin: base }, body: JSON.stringify(wheelChange) })).status, 401);
+  assert.equal((await request(worker, '/api/wheel-options', makeWrite(base, JSON.stringify(wheelChange)))).status, 200);
+  assert.deepEqual(mutations.at(-1), wheelChange);
   const stageInput = { name: 'photo.jpg', operationId: 'browser-photo-001', dataUrl: 'data:image/jpeg;base64,ABCD' };
   const stage = await request(worker, '/api/photos', makeWrite(base, JSON.stringify(stageInput)));
   assert.equal(stage.status, 200);

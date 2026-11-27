@@ -5,6 +5,11 @@ const PHOTO_SIZE_LIMIT = 1024 * 1024;
 const SOURCE_SIZE_LIMIT = 25 * 1024 * 1024;
 const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"]);
 const REPOSITORY = "https://github.com/gdutsen-jpg/gdutsen-jpg.github.io";
+const WHEELS = {
+  activities: { label: "活动", example: "周末野餐" },
+  cuisines: { label: "菜系", example: "徽菜" },
+  ingredients: { label: "肉类食材", example: "猪梅花肉" }
+};
 
 const account = document.getElementById("account");
 const albumLink = document.getElementById("album-link");
@@ -19,13 +24,17 @@ const contentErrorText = document.getElementById("content-error-text");
 const retryContent = document.getElementById("retry-content");
 const editor = document.getElementById("editor");
 const editorIntro = document.getElementById("editor-intro");
-const activityList = document.getElementById("activity-list");
-const activitiesEmpty = document.getElementById("activities-empty");
-const activityForm = document.getElementById("activity-form");
-const activityName = document.getElementById("activity-name");
-const activityStatus = document.getElementById("activity-status");
-const activityRemoveDialog = document.getElementById("activity-remove-dialog");
-const activityRemoveDetail = document.getElementById("activity-remove-detail");
+const wheelPicker = document.getElementById("wheel-picker");
+const wheelOptions = document.getElementById("wheel-options");
+const wheelOptionsEmpty = document.getElementById("wheel-options-empty");
+const wheelOptionForm = document.getElementById("wheel-option-form");
+const wheelOptionLabel = document.getElementById("wheel-option-label");
+const wheelOptionName = document.getElementById("wheel-option-name");
+const addWheelOptionButton = document.getElementById("add-wheel-option");
+const wheelOptionStatus = document.getElementById("wheel-option-status");
+const wheelRemoveDialog = document.getElementById("wheel-remove-dialog");
+const wheelRemoveTitle = document.getElementById("wheel-remove-title");
+const wheelRemoveDetail = document.getElementById("wheel-remove-detail");
 const memoryForm = document.getElementById("memory-form");
 const newFields = document.getElementById("new-fields");
 const existingFields = document.getElementById("existing-fields");
@@ -48,6 +57,7 @@ const visitedDraft = document.getElementById("visited-draft");
 const visitedStatus = document.getElementById("visited-status");
 const pendingOperations = new Map();
 const stagedPhotos = [];
+const wheelDrafts = new Map();
 
 let queuedCoverId = "";
 let pendingPublication = null;
@@ -55,7 +65,8 @@ let coverPickerEntryId = "";
 let coverPickerOpen = false;
 let selectedExistingCoverId = "";
 let pendingVisitSave = null;
-let activityRemoval = null;
+let selectedWheel = wheelPicker.querySelector("input:checked").value;
+let wheelRemoval = null;
 let content = null;
 let saving = false;
 let readingContent = false;
@@ -129,11 +140,13 @@ function selectedMemory() {
 function syncControls() {
   const locked = editorLocked();
   const existing = memoryForm.elements.mode.value === "existing";
-  for (const field of activityForm.elements) {
-    field.disabled = locked;
+  wheelPicker.disabled = locked;
+  const wheelLocked = locked || !Array.isArray(content?.[selectedWheel]);
+  for (const field of wheelOptionForm.elements) {
+    field.disabled = wheelLocked;
   }
-  for (const button of activityList.querySelectorAll("button")) {
-    button.disabled = locked;
+  for (const button of wheelOptions.querySelectorAll("button")) {
+    button.disabled = wheelLocked;
   }
   for (const field of Array.from(memoryForm.elements)) {
     if (field instanceof HTMLFieldSetElement) {
@@ -164,8 +177,12 @@ function syncControls() {
   visitedDraft.textContent = visitCount ? `${visitCount} 处更改待保存` : "";
 }
 
-function renderContent() {
-  const activityRows = content.activities.map((name, index) => {
+function renderWheelOptions() {
+  const wheel = selectedWheel;
+  const { label: wheelLabel, example } = WHEELS[wheel];
+  const options = content?.[wheel];
+  const available = Array.isArray(options);
+  const rows = (available ? options : []).map((name, index) => {
     const item = document.createElement("li");
     const label = document.createElement("span");
     const remove = document.createElement("button");
@@ -173,23 +190,45 @@ function renderContent() {
     remove.type = "button";
     remove.className = "text-button";
     remove.textContent = "删除";
-    remove.setAttribute("aria-label", `删除活动 ${name}`);
+    remove.setAttribute("aria-label", `删除${wheelLabel} ${name}`);
     remove.addEventListener("click", () => {
-      if (editorLocked()) {
+      if (editorLocked() || selectedWheel !== wheel) {
         return;
       }
-      activityRemoval = { name, index, trigger: remove };
-      activityRemoveDetail.textContent = `确定从转盘中删除“${name}”吗？`;
-      activityRemoveDialog.returnValue = "";
-      activityRemoveDialog.showModal();
+      wheelRemoval = { wheel, name, index, trigger: remove };
+      wheelRemoveTitle.textContent = `删除${wheelLabel}`;
+      wheelRemoveDetail.textContent = `确定从${wheelLabel}转盘中删除“${name}”吗？`;
+      wheelRemoveDialog.returnValue = "";
+      wheelRemoveDialog.showModal();
     });
     item.append(label, remove);
     return item;
   });
-  activityList.replaceChildren(...activityRows);
-  activityList.hidden = activityRows.length === 0;
-  activitiesEmpty.hidden = activityRows.length > 0;
+  wheelOptions.replaceChildren(...rows);
+  wheelOptions.setAttribute("aria-label", `${wheelLabel}转盘选项`);
+  wheelOptions.hidden = rows.length === 0;
+  wheelOptionsEmpty.hidden = rows.length > 0;
+  wheelOptionsEmpty.textContent = available ? `转盘暂无${wheelLabel}。` : `暂时无法读取${wheelLabel}转盘。`;
+  wheelOptionLabel.textContent = `${wheelLabel}名称`;
+  wheelOptionName.placeholder = `例如，${example}`;
+  addWheelOptionButton.textContent = `添加${wheelLabel}`;
+}
 
+function selectWheel(event) {
+  const wheel = event.target.value;
+  if (!Object.hasOwn(WHEELS, wheel) || wheel === selectedWheel || editorLocked()) {
+    return;
+  }
+  wheelDrafts.set(selectedWheel, wheelOptionName.value);
+  selectedWheel = wheel;
+  wheelOptionName.value = wheelDrafts.get(wheel) ?? "";
+  setStatus(wheelOptionStatus, "");
+  renderWheelOptions();
+  syncControls();
+}
+
+function renderContent() {
+  renderWheelOptions();
   const selectedMemory = memoryChoice.value;
   const memoryOptions = content.memories.map((memory) => {
     const title = memory.title || "未命名回忆";
@@ -212,7 +251,7 @@ async function refreshContent() {
   try {
     const updated = await request("/api/content");
     if (!Array.isArray(updated.activities) || !Array.isArray(updated.memories)) {
-      throw new Error("当前活动和回忆无法读取，请重试。");
+      throw new Error("暂时无法读取转盘和回忆，请重试。");
     }
     content = updated;
     renderContent();
@@ -309,57 +348,56 @@ function showCommit(element, result, message) {
   setStatus(element, message, { link });
 }
 
-function addActivity(event) {
+function addWheelOption(event) {
   event.preventDefault();
-  if (editorLocked()) {
+  const wheel = selectedWheel;
+  if (editorLocked() || !Array.isArray(content?.[wheel])) {
     return;
   }
-  const name = activityName.value.trim();
+  const name = wheelOptionName.value.trim();
   if (!name) {
-    setStatus(activityStatus, "请输入活动名称。", { error: true });
-    activityName.focus();
+    setStatus(wheelOptionStatus, `请输入${WHEELS[wheel].label}名称。`, { error: true });
+    wheelOptionName.focus();
     return;
   }
-  return saveActivity(name);
+  return updateWheelOption(wheel, "add", name);
 }
 
-async function saveActivity(name, remove = false) {
-  const path = remove ? "/api/activities/remove" : "/api/activities";
+async function updateWheelOption(wheel, action, name) {
+  const { label } = WHEELS[wheel];
+  const remove = action === "remove";
   saving = true;
   syncControls();
-  setStatus(activityStatus, remove ? "正在删除活动…" : "正在提交活动…");
+  setStatus(wheelOptionStatus, remove ? `正在删除${label}…` : `正在提交${label}…`);
   try {
-    const result = await save(path, { name }, `${path}:${name}`);
+    const result = await save("/api/wheel-options", { wheel, action, name }, `wheel:${wheel}:${action}:${name}`);
     if (!remove) {
-      activityForm.reset();
+      wheelOptionName.value = "";
+      wheelDrafts.delete(wheel);
     }
     const status = remove
-      ? (result.changed ? "已提交删除。公开相册将在部署后更新。" : "这个活动已从转盘中移除。")
-      : (result.changed ? "已提交到 GitHub。公开相册将在部署后更新。" : "这个活动已在转盘清单中。");
-    showCommit(
-      activityStatus,
-      result,
-      status
-    );
+      ? (result.changed ? "已提交删除。公开相册将在部署后更新。" : `这项${label}已从转盘中移除。`)
+      : (result.changed ? "已提交到 GitHub。公开相册将在部署后更新。" : `这项${label}已在转盘清单中。`);
+    showCommit(wheelOptionStatus, result, status);
     await refreshContent();
   } catch (error) {
-    showRequestError(activityStatus, error);
+    showRequestError(wheelOptionStatus, error);
   } finally {
     saving = false;
     syncControls();
   }
 }
 
-async function confirmActivityRemoval() {
-  const removal = activityRemoval;
-  activityRemoval = null;
-  if (!removal || activityRemoveDialog.returnValue !== "remove" || editorLocked()) {
+async function confirmWheelRemoval() {
+  const removal = wheelRemoval;
+  wheelRemoval = null;
+  if (!removal || wheelRemoveDialog.returnValue !== "remove" || editorLocked() || removal.wheel !== selectedWheel) {
     return;
   }
-  await saveActivity(removal.name, true);
+  await updateWheelOption(removal.wheel, "remove", removal.name);
   if (document.activeElement === document.body || document.activeElement === removal.trigger) {
-    const buttons = activityList.querySelectorAll("button");
-    const next = buttons[removal.index] ?? buttons[removal.index - 1] ?? activityName;
+    const buttons = wheelOptions.querySelectorAll("button");
+    const next = buttons[removal.index] ?? buttons[removal.index - 1] ?? wheelOptionName;
     next.focus();
   }
 }
@@ -724,8 +762,9 @@ logout.addEventListener("click", async () => {
 });
 retrySession.addEventListener("click", checkSession);
 retryContent.addEventListener("click", refreshContent);
-activityForm.addEventListener("submit", addActivity);
-activityRemoveDialog.addEventListener("close", confirmActivityRemoval);
+wheelPicker.addEventListener("change", selectWheel);
+wheelOptionForm.addEventListener("submit", addWheelOption);
+wheelRemoveDialog.addEventListener("close", confirmWheelRemoval);
 memoryForm.addEventListener("submit", publishMemory);
 memoryForm.querySelectorAll('input[name="mode"]').forEach((radio) => {
   radio.addEventListener("change", updateMemoryDestination);

@@ -10,6 +10,16 @@ const MAX_BATCH_REQUEST_BYTES = 16 * 1024 * 1024;
 const PHOTO_STAGE_SECONDS = 24 * 3600;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
+const wheelDefaults = {
+  cuisines: [
+    '粤菜', '川菜', '湘菜', '江浙菜', '西北菜', '云贵菜', '东北菜', '火锅',
+    '烧烤烤肉', '海鲜', '小吃简餐', '自助餐', '日式料理', '韩式料理', '东南亚菜', '西餐',
+  ],
+  ingredients: [
+    '鸡腿', '鸡翅', '鸡胸肉', '鸭肉', '五花肉', '猪排骨', '猪里脊', '牛腩',
+    '牛腱子', '牛里脊', '羊腿肉', '羊排',
+  ],
+};
 const securityHeaders = {
   'Cache-Control': 'no-store',
   'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://raw.githubusercontent.com; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
@@ -267,9 +277,10 @@ export function createAdminWorker({ fetcher = fetch, makeStore = createGitHubSto
         return json({ ready, user: authorized ? { login: session.login } : null, albumUrl: env.ALBUM_URL });
       }
       if (!authorized) return json({ error: 'Sign in with GitHub to continue.' }, 401);
-      const store = makeStore({ token: session.token, repository: env.GITHUB_REPOSITORY, branch: env.GITHUB_BRANCH, fetcher, regionIds });
+      const store = makeStore({ token: session.token, repository: env.GITHUB_REPOSITORY, branch: env.GITHUB_BRANCH, fetcher, regionIds, wheelDefaults });
       if (method === 'GET' && pathname === '/api/content') return json(await store.getContent());
       if (method === 'POST' && pathname === '/api/activities') return json(await store.addActivity(await readJson(request)));
+      if (method === 'POST' && pathname === '/api/wheel-options') return json(await store.changeWheelOptions(await readJson(request)));
       if (method === 'POST' && pathname === '/api/visited') return json(await store.updateVisited(await readJson(request)));
       if (method === 'POST' && pathname === '/api/activities/remove') return json(await store.removeActivity(await readJson(request)));
       if (method === 'POST' && pathname === '/api/photos') {

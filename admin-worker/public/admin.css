@@ -155,7 +155,15 @@ h2 {
   border-top: 1px solid var(--line);
 }
 
-.activities {
+.mode-group.wheel-picker {
+  margin: 0.65rem 0 0.7rem;
+}
+
+.mode-group.wheel-picker span {
+  padding-inline: 0.6rem;
+}
+
+.wheel-options {
   display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
@@ -164,7 +172,7 @@ h2 {
   list-style: none;
 }
 
-.activities li {
+.wheel-options li {
   display: flex;
   align-items: center;
   gap: 0.35rem;
@@ -176,12 +184,12 @@ h2 {
   font-size: 0.85rem;
 }
 
-.activities span {
+.wheel-options span {
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
-.activities button {
+.wheel-options button {
   flex: none;
   min-height: 1.65rem;
   font-size: 0.8rem;
@@ -486,7 +494,7 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .activities {
+  .wheel-options {
     margin-top: 0.42rem;
   }
 
