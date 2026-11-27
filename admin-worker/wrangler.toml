@@ -1,0 +1,17 @@
+name = "gomoku-album-admin"
+main = "src/worker.mjs"
+compatibility_date = "2026-11-27"
+workers_dev = true
+preview_urls = false
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+run_worker_first = true
+
+[vars]
+GITHUB_REPOSITORY = "gdutsen-jpg/gdutsen-jpg.github.io"
+GITHUB_REPOSITORY_ID = "1473086930"
+GITHUB_OWNER_ID = "360918283"
+GITHUB_BRANCH = "main"
+ALBUM_URL = "http://www.wzqls.online/"

@@ -1,0 +1,110 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { createAdminWorker } from './src/worker.mjs';
+
+const base = 'https://album-admin.example';
+const env = {
+  ADMIN_ORIGIN: base,
+  ALBUM_URL: 'http://www.wzqls.online/',
+  GITHUB_CLIENT_ID: 'test-client',
+  GITHUB_CLIENT_SECRET: 'test-secret',
+  GITHUB_OWNER_ID: '55',
+  GITHUB_REPOSITORY_ID: '78',
+  GITHUB_REPOSITORY: 'owner/pages',
+  GITHUB_BRANCH: 'main',
+  SESSION_KEY: Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString('base64url'),
+  ASSETS: { fetch: () => new Response('static') },
+};
+function request(worker, path, options, override = env) {
+  return worker.fetch(new Request(base + path, options), override);
+}
+
+test('assets, readiness, and anonymous write access', async () => {
+  const worker = createAdminWorker();
+  const page = await request(worker, '/');
+  assert.equal(await page.text(), 'static');
+  assert.equal(page.headers.get('Cache-Control'), 'no-store');
+  assert.match(page.headers.get('Content-Security-Policy'), /frame-ancestors 'none'/);
+  const inactive = await request(worker, '/api/session', {}, { ...env, GITHUB_CLIENT_SECRET: '' });
+  assert.deepEqual(await inactive.json(), { ready: false, user: null, albumUrl: env.ALBUM_URL });
+  assert.equal((await request(worker, '/api/content')).status, 401);
+  const write = await request(worker, '/api/activities', { method: 'POST', headers: { Origin: base } });
+  assert.equal(write.status, 401);
+  assert.equal((await request(worker, '/api/memories', { method: 'POST' })).status, 403);
+});
+
+test('OAuth PKCE, owner and repository restrictions, encrypted session, and same-origin mutations', async () => {
+  const requests = [];
+  const mutations = [];
+  let userId = 77;
+  let push = true;
+  const worker = createAdminWorker({
+    fetcher: async (url, options) => {
+      requests.push({ url, options });
+      if (url.endsWith('/access_token')) return Response.json({ access_token: 'ghu_test_bearer', expires_in: 28800 });
+      if (url.endsWith('/user')) return Response.json({ id: userId, login: 'owner' });
+      assert.equal(url, 'https://api.github.com/repos/owner/pages');
+      return Response.json({ id: 78, permissions: { push } });
+    },
+    makeStore: ({ token, repository, branch }) => {
+      assert.equal(token, 'ghu_test_bearer');
+      assert.equal(repository, 'owner/pages');
+      assert.equal(branch, 'main');
+      const save = (input) => {
+        mutations.push(input);
+        return { commit: 'abc', changed: true };
+      };
+      return { getContent: () => ({ activities: [], memories: [] }), addActivity: save, addMemoryPhotos: save };
+    },
+  });
+  const start = await request(worker, '/auth/login');
+  const auth = new URL(start.headers.get('Location'));
+  assert.equal(auth.origin, 'https://github.com');
+  assert.equal(auth.searchParams.get('redirect_uri'), base + '/auth/callback');
+  assert.equal(auth.searchParams.get('code_challenge_method'), 'S256');
+  const oauthCookie = start.headers.getSetCookie()[0].split(';')[0];
+  assert.match(start.headers.getSetCookie()[0], /HttpOnly; Secure; SameSite=Lax/);
+  const options = { headers: { Cookie: oauthCookie } };
+  const callback = '/auth/callback?code=code&state=' + auth.searchParams.get('state');
+  assert.equal((await request(worker, callback + '-wrong', options)).headers.get('Location'), '/?error=auth');
+  assert.equal(requests.length, 0);
+  assert.equal((await request(worker, callback, options)).headers.get('Location'), '/?error=forbidden');
+  assert.equal(requests.length, 2);
+  const exchange = requests[0].options.body;
+  assert.equal(exchange.get('repository_id'), '78');
+  const verifier = new TextEncoder().encode(exchange.get('code_verifier'));
+  const challenge = new Uint8Array(await crypto.subtle.digest('SHA-256', verifier));
+  assert.equal(Buffer.from(challenge).toString('base64url'), auth.searchParams.get('code_challenge'));
+  userId = 55;
+  push = false;
+  assert.equal((await request(worker, callback, options)).headers.get('Location'), '/?error=repository');
+  push = true;
+  const login = await request(worker, callback, options);
+  assert.equal(login.headers.get('Location'), '/');
+  const active = login.headers.getSetCookie().find((value) => value.startsWith('__Host-gomoku-session='));
+  assert.match(active, /Max-Age=3600; Path=\/; HttpOnly; Secure; SameSite=Lax/);
+  assert.doesNotMatch(active, /ghu_test_bearer/);
+  const cookie = active.split(';')[0];
+  const session = await request(worker, '/api/session', { headers: { Cookie: cookie } });
+  assert.deepEqual(await session.json(), { ready: true, user: { login: 'owner' }, albumUrl: env.ALBUM_URL });
+  assert.equal((await request(worker, '/api/content', { headers: { Cookie: cookie + 'tamper' } })).status, 401);
+  const makeWrite = (origin, body, contentType = 'application/json') => ({
+    method: 'POST',
+    headers: { Origin: origin, Cookie: cookie, 'Content-Type': contentType },
+    body,
+  });
+  assert.equal((await request(worker, '/api/activities', makeWrite('https://elsewhere.example', '{}'))).status, 403);
+  assert.equal((await request(worker, '/api/activities', makeWrite(base, '{}', 'text/plain'))).status, 415);
+  assert.equal((await request(worker, '/api/activities', makeWrite(base, '[]'))).status, 400);
+  assert.equal((await request(worker, '/api/memories', makeWrite(base, 'x'.repeat(1_450_001)))).status, 413);
+  assert.equal(mutations.length, 0);
+  const activity = { name: '测试', operationId: 'browser-update-01' };
+  assert.deepEqual(await (await request(worker, '/api/activities', makeWrite(base, JSON.stringify(activity)))).json(), { commit: 'abc', changed: true });
+  const memory = { photos: [{ name: 'photo.jpg', dataUrl: 'data:image/jpeg;base64,ABCD' }] };
+  assert.deepEqual(await (await request(worker, '/api/memories', makeWrite(base, JSON.stringify(memory)))).json(), { commit: 'abc', changed: true });
+  assert.deepEqual(mutations, [activity, memory]);
+  const logout = await request(worker, '/auth/logout', { method: 'POST', headers: { Origin: base, Cookie: cookie } });
+  assert.equal(logout.status, 204);
+  assert.match(logout.headers.getSetCookie()[0], /Max-Age=0/);
+});
+

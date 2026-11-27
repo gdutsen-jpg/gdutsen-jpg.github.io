@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#fbf7f9">
+  <title>相册管理 · 寻找我的玫瑰花</title>
+  <link rel="stylesheet" href="/admin.css">
+  <script src="/admin.js" defer></script>
+</head>
+<body>
+  <header class="site-header">
+    <div class="shell header-inner">
+      <a class="wordmark" id="album-link" href="http://www.wzqls.online/" target="_blank" rel="noopener noreferrer">寻找我的“玫瑰花”</a>
+      <div class="account" id="account" hidden>
+        <span id="account-name"></span>
+        <button class="text-button" id="logout" type="button">退出登录</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="page-intro">
+      <h1>相册管理</h1>
+      <p id="editor-intro" hidden>新增活动或上传回忆照片，提交后会随公开相册发布。</p>
+    </div>
+
+    <div class="access" id="access">
+      <p class="status" id="access-status" role="status">正在检查登录状态…</p>
+      <a class="button primary" id="login" href="/auth/login" hidden>使用 GitHub 登录</a>
+      <button class="button secondary" id="retry-session" type="button" hidden>重试</button>
+    </div>
+    <p class="status error" id="session-error" role="alert" hidden></p>
+    <div class="content-error" id="content-error" hidden>
+      <p class="status error" id="content-error-text" role="status"></p>
+      <button class="text-button" id="retry-content" type="button">重新读取</button>
+    </div>
+    <noscript><p>请启用 JavaScript 后再使用相册管理。</p></noscript>
+
+    <div id="editor" hidden>
+      <section class="editor-section" aria-labelledby="activities-heading">
+        <div class="section-heading">
+          <h2 id="activities-heading">活动转盘</h2>
+          <ul class="activities" id="activity-list" aria-label="已发布的活动" hidden></ul>
+        </div>
+        <form id="activity-form">
+          <label for="activity-name">活动名称</label>
+          <div class="form-line">
+            <input id="activity-name" name="activity" type="text" maxlength="60" placeholder="例如，周末野餐" required>
+            <button class="button primary" type="submit">添加活动</button>
+          </div>
+          <p class="status" id="activity-status" role="status" aria-live="polite" hidden></p>
+        </form>
+      </section>
+
+      <section class="editor-section" aria-labelledby="photos-heading">
+        <div class="section-heading">
+          <h2 id="photos-heading">回忆照片</h2>
+        </div>
+        <form id="memory-form">
+          <fieldset class="mode-group">
+            <legend class="visually-hidden">选择回忆</legend>
+            <label><input type="radio" name="mode" value="new" checked><span>新建回忆</span></label>
+            <label><input type="radio" name="mode" value="existing"><span>添加到已有回忆</span></label>
+          </fieldset>
+          <div class="existing-fields" id="existing-fields" hidden>
+            <label for="memory-choice">已有回忆</label>
+            <select id="memory-choice" name="entryId" disabled>
+              <option value="">选择一条回忆</option>
+            </select>
+          </div>
+          <div class="new-fields" id="new-fields">
+            <div class="field-pair">
+              <label>日期<input id="memory-date" type="date" min="1900-01-01" max="9999-12-31" name="date" required></label>
+              <label>分类
+                <select name="category">
+                  <option value="日常">日常</option>
+                  <option value="约会">约会</option>
+                  <option value="旅行">旅行</option>
+                  <option value="纪念日">纪念日</option>
+                  <option value="心动">心动</option>
+                </select>
+              </label>
+            </div>
+            <label>标题 <span class="optional">选填</span><input type="text" name="title" maxlength="100"></label>
+            <label>地点 <span class="optional">选填</span><input type="text" name="location" maxlength="150"></label>
+            <label>想记下的话 <span class="optional">选填</span><textarea name="story" rows="3" maxlength="10000"></textarea></label>
+          </div>
+          <div class="upload">
+            <div class="photo-picker">
+              <input class="visually-hidden" id="photo-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif" aria-describedby="photo-help">
+              <label class="button secondary" for="photo-files">选择照片</label>
+              <p class="field-help" id="photo-help">每次可上传 1 张，网页会自动压缩照片。可通过已有回忆继续添加。</p>
+            </div>
+            <p class="status" id="photo-status" role="status" aria-live="polite" hidden></p>
+            <ul class="photo-list" id="photo-list" aria-label="待上传的照片" hidden></ul>
+          </div>
+          <div class="save-line">
+            <button class="button primary" id="save-memory" type="submit">发布回忆</button>
+            <p class="status" id="memory-status" role="status" aria-live="polite" hidden></p>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

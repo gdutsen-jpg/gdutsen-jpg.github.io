@@ -1,0 +1,418 @@
+@font-face {
+  font-family: "Gomoku Pixel";
+  src: url("/gomoku-pixel.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+  --page: #fbf7f9;
+  --paper: #fffdfd;
+  --text: #392e42;
+  --muted: #6f6174;
+  --accent: #8d5577;
+  --accent-hover: #71425f;
+  --soft: #f0e5ee;
+  --line: #e3d5e1;
+  --field-line: #cdbbcd;
+  --error: #963850;
+  --pixel: "Gomoku Pixel", "Microsoft YaHei", "PingFang SC", sans-serif;
+  --readable: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  background: radial-gradient(ellipse at 85% 0%, #eee4f1 0, transparent 38rem), var(--page);
+  color: var(--text);
+  font: 1rem/1.6 var(--readable);
+}
+
+a {
+  color: var(--accent-hover);
+  text-underline-offset: 0.19em;
+}
+
+button, input, select, textarea {
+  font: inherit;
+}
+
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.shell {
+  width: min(100% - 2.5rem, 62rem);
+  margin-inline: auto;
+}
+
+.site-header {
+  border-bottom: 1px solid var(--line);
+}
+
+.header-inner, .account, .form-line, .save-line {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.header-inner {
+  justify-content: space-between;
+  min-height: 4.5rem;
+  padding-block: 0.6rem;
+}
+
+.wordmark, h1, h2, .button, .mode-group label {
+  font-family: var(--pixel);
+}
+
+.wordmark {
+  color: var(--text);
+  font-size: 1.025rem;
+  line-height: 1.4;
+  text-decoration: none;
+}
+
+.wordmark:hover {
+  color: var(--accent);
+}
+
+.account {
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.9rem;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+main {
+  padding-block: clamp(2.1rem, 7vw, 4.8rem) 5rem;
+}
+
+.page-intro {
+  margin-bottom: clamp(1.4rem, 4vw, 2.4rem);
+}
+
+h1, h2, p {
+  margin-top: 0;
+}
+
+h1, h2 {
+  font-weight: normal;
+  line-height: 1.4;
+}
+
+h1 {
+  margin-bottom: 0.55rem;
+  font-size: clamp(2rem, 5vw, 3.25rem);
+}
+
+h2 {
+  margin-bottom: 0.55rem;
+  font-size: clamp(1.35rem, 3vw, 1.75rem);
+}
+
+.page-intro p, .field-help {
+  color: var(--muted);
+}
+
+.page-intro p, .status {
+  margin-bottom: 0;
+}
+
+.access {
+  max-width: 32rem;
+  padding: 1.45rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: var(--paper);
+}
+
+.access .button {
+  margin-top: 1rem;
+}
+
+.content-error {
+  margin-bottom: 1rem;
+}
+
+.editor-section {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.8fr) minmax(0, 2fr);
+  gap: 1rem clamp(1.5rem, 4vw, 3.5rem);
+  padding-block: 1.85rem 2rem;
+  border-top: 1px solid var(--line);
+}
+
+.activities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.activities li {
+  max-width: 100%;
+  padding: 0.22rem 0.5rem;
+  border-radius: 0.32rem;
+  background: var(--soft);
+  color: #65495e;
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+label {
+  display: block;
+  font-size: 0.925rem;
+}
+
+input:not([type="radio"], [type="file"]), select, textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.53rem 0.7rem;
+  border: 1px solid var(--field-line);
+  border-radius: 0.48rem;
+  background: var(--paper);
+  color: var(--text);
+  font-size: 1rem;
+}
+
+input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+textarea {
+  resize: vertical;
+}
+
+select {
+  appearance: none;
+  padding-right: 2rem;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14' fill='none'%3E%3Cpath d='m3 5 4 4 4-4' stroke='%236f6174' stroke-width='1.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-position: right 0.65rem center;
+  background-repeat: no-repeat;
+}
+
+.form-line, label input, label select, label textarea, .existing-fields select {
+  margin-top: 0.25rem;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.95rem;
+  border: 1px solid transparent;
+  border-radius: 0.48rem;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.primary {
+  background: var(--accent);
+  color: #fff;
+}
+
+.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.secondary {
+  border-color: var(--field-line);
+  background: var(--paper);
+  color: var(--text);
+}
+
+.text-button {
+  padding: 0.2rem;
+  border: 0;
+  background: transparent;
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 0.19em;
+  cursor: pointer;
+}
+
+button:disabled, input:disabled, select:disabled, textarea:disabled {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.mode-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 1rem;
+  padding: 0;
+  border: 0;
+}
+
+.mode-group label {
+  position: relative;
+  cursor: pointer;
+}
+
+.mode-group span {
+  display: block;
+  padding: 0.43rem 0.7rem;
+  border: 1px solid transparent;
+  border-radius: 0.45rem;
+  color: var(--muted);
+}
+
+.mode-group input:checked + span {
+  border-color: var(--line);
+  background: var(--soft);
+  color: var(--accent-hover);
+}
+
+.mode-group input:focus-visible + span {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.mode-group input:disabled + span {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.mode-group input, .visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.new-fields, .field-pair {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.field-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.optional, .field-help, .status {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+
+.field-help {
+  margin: 0.28rem 0 0;
+}
+
+.upload {
+  margin-top: 1rem;
+}
+
+.photo-picker {
+  padding: 0.65rem;
+  border: 1px dashed var(--field-line);
+  border-radius: 0.48rem;
+  background: #fbf7fc;
+}
+
+.photo-picker input:focus-visible + label {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.photo-picker input:disabled + label {
+  opacity: 0.62;
+  cursor: not-allowed;
+}
+
+.photo-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(6.4rem, 1fr));
+  gap: 0.65rem;
+  margin: 0.8rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.photo-list li {
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: 0.48rem;
+  overflow: hidden;
+  background: var(--paper);
+}
+
+.photo-list img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+}
+
+.photo-list .photo-name, .photo-list button {
+  display: block;
+  margin: 0.2rem 0.4rem;
+  font-size: 0.8rem;
+}
+
+.photo-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.save-line {
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 0.9rem;
+}
+
+.status:not(.save-line .status) {
+  margin-top: 0.45rem;
+}
+
+.status.error {
+  color: var(--error);
+}
+
+.status a {
+  margin-left: 0.35em;
+}
+
+@media (max-width: 44rem) {
+  .editor-section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .activities {
+    margin-top: 0.42rem;
+  }
+}
+
+@media (max-width: 24rem) {
+  .shell {
+    width: calc(100% - 1.6rem);
+  }
+
+  .field-pair {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
