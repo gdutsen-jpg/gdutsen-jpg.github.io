@@ -6,15 +6,20 @@
     'assets/scripts/core.js?v=20261127-cover',
     'assets/scripts/app.js?v=20261127-cover',
     'assets/scripts/daylight-theme.js',
-    'data/site-content.js',
+    'data/site-content.js?v=20261127-cuisine',
     'assets/scripts/browser-backup.js',
-    'assets/scripts/weekend-wheel.js',
+    'assets/scripts/weekend-wheel.js?v=20261127-cuisine',
     'assets/maps/travel-map-data.js',
     'assets/scripts/travel-maps.js',
   ];
-  const styleFile = 'assets/styles/site.css';
-  const fontFile = 'assets/fonts/gomoku-pixel.woff2';
-  const licenseFile = 'assets/fonts/OFL.txt';
+  const styleFiles = [
+    'assets/styles/site.css?v=20261127-stats-dm-sans',
+    'assets/styles/wheels.css?v=20261127-cuisine',
+  ];
+  const fonts = [
+    { file: 'gomoku-pixel.woff2', license: 'OFL.txt' },
+    { file: 'dm-sans-latin-400.woff2', license: 'dm-sans-OFL.txt' },
+  ];
   const pageTemplate = document.documentElement.outerHTML;
   const wrap = document.querySelector('.wrap');
   wrap.inert = true;
@@ -69,10 +74,10 @@
     const images = [...copy.querySelectorAll('img[src]'), cover];
     const icon = copy.querySelector('link[rel="icon"]');
     const iconImage = icon && images.find(image => image.getAttribute('src') === icon.getAttribute('href'));
-    const [css, font, license, scripts] = await Promise.all([
-      readText(styleFile),
-      readDataUrl(fontFile, 'font/woff2'),
-      readText(licenseFile),
+    const [stylesheets, fontUrls, licenses, scripts] = await Promise.all([
+      Promise.all(styleFiles.map(readText)),
+      Promise.all(fonts.map(({ file }) => readDataUrl('assets/fonts/' + file, 'font/woff2'))),
+      Promise.all(fonts.map(({ license }) => readText('assets/fonts/' + license))),
       Promise.all(scriptFiles.map(readText)),
       Promise.all(images.map(async image => {
         const file = image.getAttribute('src');
@@ -83,14 +88,22 @@
       })),
     ]);
 
-    if (!css.includes('../fonts/gomoku-pixel.woff2') || /<\/style/i.test(css)) {
-      throw new Error('The album stylesheet could not be copied.');
-    }
     if (iconImage) icon.setAttribute('href', iconImage.getAttribute('src'));
-    const style = copy.createElement('style');
-    style.textContent = css.replaceAll('../fonts/gomoku-pixel.woff2', font);
-    copy.querySelector(`link[rel="stylesheet"][href="${styleFile}"]`).replaceWith(style);
-    copy.getElementById('embedded-font-license').content.querySelector('pre').textContent = license;
+    const [siteStyle] = stylesheets;
+    if (fonts.some(({ file }) => !siteStyle.includes('../fonts/' + file))) {
+      throw new Error('The album fonts could not be copied.');
+    }
+    for (const [index, file] of styleFiles.entries()) {
+      const css = stylesheets[index];
+      const link = copy.querySelector('link[rel="stylesheet"][href="' + file + '"]');
+      if (!link || /<\/style/i.test(css)) throw new Error('The album stylesheet could not be copied.');
+      const style = copy.createElement('style');
+      style.textContent = fonts.reduce((contents, { file: font }, fontIndex) => (
+        contents.replaceAll('../fonts/' + font, fontUrls[fontIndex])
+      ), css);
+      link.replaceWith(style);
+    }
+    copy.getElementById('embedded-font-license').content.querySelector('pre').textContent = licenses.join('\n\n');
 
     copy.querySelectorAll('script[src]').forEach(script => script.remove());
     for (const source of scripts) {

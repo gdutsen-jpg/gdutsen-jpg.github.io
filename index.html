@@ -7,7 +7,8 @@
 <meta name="color-scheme" content="light">
 <title>寻找我的玫瑰花</title>
 <link rel="icon" type="image/png" sizes="216x216" href="assets/art/botanical-logo.png">
-<link rel="stylesheet" href="assets/styles/site.css">
+<link rel="stylesheet" href="assets/styles/site.css?v=20261127-stats-dm-sans">
+<link rel="stylesheet" href="assets/styles/wheels.css?v=20261127-cuisine">
 </head>
 <body>
 <svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><defs>
@@ -54,7 +55,8 @@
   </div>
 <div class="toolbar"><div class="filters" role="group" aria-label="Filter memories by category"><button class="chip active" data-filter="全部" aria-pressed="true">All</button><button class="chip" data-filter="日常" aria-pressed="false">Daily</button><button class="chip" data-filter="约会" aria-pressed="false">Dates</button><button class="chip" data-filter="旅行" aria-pressed="false">Trips</button><button class="chip" data-filter="纪念日" aria-pressed="false">Anniversaries</button><button class="chip" data-filter="心动" aria-pressed="false">Little Sparks</button><button class="chip" data-filter="收藏" aria-pressed="false">♡ Favorites</button><button class="category-language" id="category-language-toggle" type="button" aria-pressed="false" aria-label="Show categories in Chinese"><span class="category-language-zh" lang="zh-Hans" aria-hidden="true">中</span><span class="category-language-divider" aria-hidden="true"> / </span><span class="category-language-en" lang="en" aria-hidden="true">EN</span></button></div><div class="tools"><label class="search-box"><svg class="icon"><use href="#i-search"/></svg><input type="search" id="search" placeholder="Find a memory…" aria-label="Search titles, stories, and places"></label><select id="sort-order" aria-label="Sort by date"><option value="desc">Newest first</option><option value="asc">Oldest first</option></select></div></div>
 <div id="records" class="content" role="tabpanel" aria-labelledby="wall-tab"><div class="empty"><svg class="icon"><use href="#i-photo"/></svg><h3>No memories yet.</h3></div></div></section>
-<section class="weekend-wheel album-module" id="weekend-wheel" aria-labelledby="weekend-title">
+<div class="album-wheels">
+<section class="weekend-wheel album-module" id="weekend-wheel" data-wheel="activities" aria-labelledby="weekend-title">
   <h2 id="weekend-title">Activity Wheel</h2>
   <div class="weekend-panel">
     <div class="weekend-play">
@@ -63,11 +65,26 @@
         <span class="weekend-pointer"></span>
         <span class="weekend-hub"></span>
       </div>
-      <button class="btn primary" id="weekend-spin" type="button">Spin the wheel</button>
+      <button class="btn primary" id="weekend-spin" type="button" aria-label="Spin activity wheel">Spin the wheel</button>
       <p id="weekend-result" role="status" aria-atomic="true"></p>
     </div>
   </div>
 </section>
+<section class="weekend-wheel album-module" id="cuisine-wheel" data-wheel="cuisines" aria-labelledby="cuisine-title">
+  <h2 id="cuisine-title">Cuisine Wheel</h2>
+  <div class="weekend-panel">
+    <div class="weekend-play">
+      <div class="weekend-dial">
+        <canvas id="cuisine-disc" width="300" height="300" role="img" aria-label="Cuisine wheel"></canvas>
+        <span class="weekend-pointer"></span>
+        <span class="weekend-hub"></span>
+      </div>
+      <button class="btn primary" id="cuisine-spin" type="button" aria-label="Spin cuisine wheel">Spin the wheel</button>
+      <p id="cuisine-result" role="status" aria-atomic="true"></p>
+    </div>
+  </div>
+</section>
+</div>
 <section class="album-module" id="travel-maps" aria-labelledby="travel-title">
   <h2 id="travel-title">Places we've been</h2>
   <p class="travel-instructions">Click a region to see its name and visit status.</p>
@@ -119,11 +136,11 @@
 <template id="first-meeting-cover"><img src="assets/art/first-meeting-cover.png" alt="" width="720" height="720"></template>
 <template id="embedded-font-license"><pre></pre></template>
 <script src="assets/scripts/core.js?v=20261127-cover" defer></script>
-<script src="assets/scripts/hosted.js?v=20261127-cover" defer></script>
+<script src="assets/scripts/hosted.js?v=20261127-cuisine" defer></script>
 <script src="assets/scripts/daylight-theme.js" defer></script>
-<script src="data/site-content.js" defer></script>
+<script src="data/site-content.js?v=20261127-cuisine" defer></script>
 <script src="assets/scripts/browser-backup.js" defer></script>
-<script src="assets/scripts/weekend-wheel.js" defer></script>
+<script src="assets/scripts/weekend-wheel.js?v=20261127-cuisine" defer></script>
 <script src="assets/maps/travel-map-data.js" defer></script>
 <script src="assets/scripts/travel-maps.js" defer></script>
 </body></html>

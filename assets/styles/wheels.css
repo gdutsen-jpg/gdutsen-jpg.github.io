@@ -1,0 +1,65 @@
+.album-wheels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 clamp(1.25rem, 4vw, 3rem);
+}
+
+.album-wheels .weekend-panel {
+  grid-template-columns: minmax(0, 320px);
+}
+
+.album-wheels .weekend-dial {
+  width: min(100%, 300px);
+}
+
+#cuisine-disc {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--line), 0 8px 24px #3d31411a;
+}
+
+#cuisine-spin:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+#cuisine-result {
+  width: 100%;
+  min-height: 1.5em;
+  margin: 12px 0 0;
+  color: var(--accent-dark);
+  font-size: 15px;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 680px) {
+  .album-wheels {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 520px) {
+  .album-wheels #weekend-wheel .weekend-dial {
+    width: min(100%, 210px);
+  }
+
+  .album-wheels #cuisine-wheel .weekend-dial {
+    width: min(100%, 280px);
+  }
+
+  #cuisine-spin {
+    max-width: 100%;
+    min-height: 35px;
+    padding: 6px 9px;
+    font-size: 12px;
+    white-space: normal;
+  }
+
+  #cuisine-result {
+    margin-top: 7px;
+    font-size: 13px;
+  }
+}
