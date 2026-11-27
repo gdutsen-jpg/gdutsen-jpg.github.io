@@ -10,7 +10,6 @@ const REGION_FORMATS = { world: /^[A-Z]{3}$/, china: /^CN-[A-Z]{2}$/ };
 const WHEELS = {
   activities: { label: '活动名称', commitName: 'activity' },
   cuisines: { label: '菜系名称', commitName: 'cuisine' },
-  ingredients: { label: '食材名称', commitName: 'ingredient' },
 };
 const RAW_MEDIA_TYPE = 'application/vnd.github.raw+json';
 
@@ -177,8 +176,7 @@ function parseContent(source) {
     throw error(502, message);
   }
   if (!record(content) || !wheelList(content.activities) ||
-      (content.cuisines !== undefined && !wheelList(content.cuisines)) ||
-      (content.ingredients !== undefined && !wheelList(content.ingredients))) {
+      (content.cuisines !== undefined && !wheelList(content.cuisines))) {
     throw error(502, message);
   }
   return content;
@@ -230,7 +228,6 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
   const regions = { world: regionSet(regionIds?.world), china: regionSet(regionIds?.china) };
   const wheelFallback = {
     cuisines: wheelList(wheelDefaults?.cuisines) ? wheelDefaults.cuisines : [],
-    ingredients: wheelList(wheelDefaults?.ingredients) ? wheelDefaults.ingredients : [],
   };
 
   async function request(path, { method = 'GET', body, raw = false, conflict = false } = {}) {
@@ -319,7 +316,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       readFile(ALBUM_PATH, head),
       readFile(CONTENT_PATH, head),
     ]);
-    const { activities, cuisines = wheelFallback.cuisines, ingredients = wheelFallback.ingredients,
+    const { activities, cuisines = wheelFallback.cuisines,
       visited: configuredVisits } = parseContent(contentSource);
     const filterVisits = (map) => [...new Set(visitedList(configuredVisits, map))].filter((id) =>
       typeof id === 'string' && REGION_FORMATS[map].test(id) && (!regions[map] || regions[map].has(id)));
@@ -339,7 +336,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       })),
     }));
     memories.sort((left, right) => right.date.localeCompare(left.date));
-    return { activities, cuisines, ingredients, memories, visited };
+    return { activities, cuisines, memories, visited };
   }
 
   async function changeWheelOptions(input) {

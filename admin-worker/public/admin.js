@@ -7,8 +7,7 @@ const PHOTO_TYPES = new Set(["image/jpeg", "image/png", "image/webp", "image/gif
 const REPOSITORY = "https://github.com/gdutsen-jpg/gdutsen-jpg.github.io";
 const WHEELS = {
   activities: { label: "活动", example: "周末野餐" },
-  cuisines: { label: "菜系", example: "徽菜" },
-  ingredients: { label: "肉类与海鲜", example: "牛肉" }
+  cuisines: { label: "菜系", example: "徽菜" }
 };
 
 const account = document.getElementById("account");

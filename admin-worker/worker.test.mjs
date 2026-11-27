@@ -58,8 +58,8 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
       return Response.json({ total_count: repositories.length, repositories });
     },
     makeStore: ({ token, repository, branch, regionIds, wheelDefaults }) => {
-      assert.equal(wheelDefaults.ingredients.length, 12);
-      assert.equal(wheelDefaults.ingredients.includes('蟹'), true);
+      assert.equal(wheelDefaults.cuisines.length, 16);
+      assert.equal(Object.hasOwn(wheelDefaults, 'ingredients'), false);
       assert.equal(regionIds.world.has('JPN'), true);
       assert.equal(regionIds.china.has('CN-GD'), true);
       assert.equal(token, 'ghu_test_bearer');
@@ -207,5 +207,42 @@ test('GitHub data requests reject redirects without forwarding their token', asy
   });
   await assert.rejects(() => store.getContent(), { status: 502 });
   assert.equal(requests, 1);
+});
+
+test('retired ingredient data survives writes to an active wheel', async () => {
+  const config = { activities: ['散步'], cuisines: ['粤菜'], ingredients: ['鱼', '鸡肉'], visited: { world: [], china: [] } };
+  const baseSha = 'a'.repeat(40);
+  const previousTree = 'b'.repeat(40);
+  const nextTree = 'c'.repeat(40);
+  const nextCommit = 'd'.repeat(40);
+  let outgoingRequests = 0;
+  let written;
+  const store = createGitHubStore({
+    token: 'test-token',
+    repository: 'owner/pages',
+    fetcher: async (url, options) => {
+      outgoingRequests += 1;
+      const endpoint = new URL(url).pathname.slice('/repos/owner/pages'.length);
+      if (endpoint === '/git/ref/heads/main') return Response.json({ object: { sha: baseSha } });
+      if (endpoint === '/contents/data/site-content.js') {
+        return new Response('globalThis.GomokuPublishedContent = ' + JSON.stringify(config) + ';');
+      }
+      if (endpoint === '/git/commits/' + baseSha) return Response.json({ tree: { sha: previousTree } });
+      if (endpoint === '/git/trees') {
+        const { tree } = JSON.parse(options.body);
+        written = JSON.parse(tree[0].content.slice('globalThis.GomokuPublishedContent = '.length).trim().slice(0, -1));
+        return Response.json({ sha: nextTree });
+      }
+      if (endpoint === '/git/commits') return Response.json({ sha: nextCommit });
+      assert.equal(endpoint, '/git/refs/heads/main');
+      assert.equal(JSON.parse(options.body).force, false);
+      return Response.json({ object: { sha: nextCommit } });
+    },
+  });
+  const mutation = { action: 'add', name: '徽菜', operationId: 'wheel-option-0001' };
+  await assert.rejects(store.changeWheelOptions({ ...mutation, wheel: 'ingredients' }), { status: 422 });
+  assert.equal(outgoingRequests, 0);
+  assert.deepEqual(await store.changeWheelOptions({ ...mutation, wheel: 'cuisines' }), { commit: nextCommit, changed: true });
+  assert.deepEqual(written, { ...config, cuisines: ['粤菜', '徽菜'] });
 });
 
