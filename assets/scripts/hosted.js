@@ -4,7 +4,7 @@
   const photoFile = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
   const scriptFiles = [
     'assets/scripts/core.js?v=20261127-cover',
-    'assets/scripts/app.js?v=20261127-cover',
+    'assets/scripts/app.js?v=20261127-clean-photo-wall',
     'assets/scripts/daylight-theme.js?v=20261127-daylight-progress',
     'data/site-content.js?v=20261127-meat-types',
     'assets/scripts/browser-backup.js',

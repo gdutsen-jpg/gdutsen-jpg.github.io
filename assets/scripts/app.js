@@ -157,8 +157,7 @@ function renderRecords() {
         <p class="wall-date">${readableDate(entry.date)} · ${h(categoryLabel(entry.category))}</p>
       </article>`;
     });
-    const photoCount = memoriesWithPhotos.reduce((count, entry) => count + entry.photos.length, 0);
-    content = `<p class="result-count">${countLabel(photoCount,'photo')} · From ${countLabel(memoriesWithPhotos.length,'memory','memories')}</p><div class="photo-wall">${cards.join('')}</div>`;
+    content = `<div class="photo-wall">${cards.join('')}</div>`;
   } else {
     let year = '';
     for (const e of entries) {
