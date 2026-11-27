@@ -11,7 +11,8 @@ globalThis.GomokuPublishedContent = {
     "博物馆",
     "看展",
     "自驾游",
-    "打坐冥想"
+    "打坐冥想",
+    "台球"
   ],
   "visited": {
     "world": [],
