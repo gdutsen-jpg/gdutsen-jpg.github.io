@@ -8,7 +8,8 @@ globalThis.GomokuPublishedContent = {
     "逛公园",
     "兜风",
     "城市随机徒步",
-    "海边"
+    "海边",
+    "博物馆"
   ],
   "visited": {
     "world": [],
