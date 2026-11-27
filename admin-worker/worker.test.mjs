@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { createAdminWorker } from './src/worker.mjs';
+import { createGitHubStore } from './src/github-store.mjs';
 
 const base = 'https://album-admin.example';
 const env = {
@@ -43,6 +44,7 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   let repositories = [repository];
   const worker = createAdminWorker({
     fetcher: async (url, options) => {
+      assert.equal(options.redirect, 'manual');
       requests.push({ url, options });
       if (url.endsWith('/access_token')) return Response.json({ access_token: 'ghu_test_bearer', expires_in: 28800 });
       if (url.endsWith('/user')) return Response.json({ id: userId, login: 'owner' });
@@ -134,5 +136,21 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   const logout = await request(worker, '/auth/logout', { method: 'POST', headers: { Origin: base, Cookie: cookie } });
   assert.equal(logout.status, 204);
   assert.match(logout.headers.getSetCookie()[0], /Max-Age=0/);
+});
+
+test('GitHub data requests reject redirects without forwarding their token', async () => {
+  let requests = 0;
+  const store = createGitHubStore({
+    token: 'test-token',
+    repository: 'owner/pages',
+    fetcher: async (url, options) => {
+      requests += 1;
+      assert.equal(url, 'https://api.github.com/repos/owner/pages/git/ref/heads/main');
+      assert.equal(options.redirect, 'manual');
+      return Response.redirect('https://elsewhere.example');
+    },
+  });
+  await assert.rejects(() => store.getContent(), { status: 502 });
+  assert.equal(requests, 1);
 });
 

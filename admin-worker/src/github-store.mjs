@@ -199,7 +199,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
         method,
         headers,
         body: body === undefined ? undefined : JSON.stringify(body),
-        redirect: 'error',
+        redirect: 'manual',
         signal: AbortSignal.timeout(30_000),
       });
     } catch {

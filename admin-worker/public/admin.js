@@ -170,6 +170,8 @@ function showAuthFeedback() {
   const result = page.searchParams.get("error");
   if (result === "auth") {
     setStatus(sessionError, "GitHub 登录未完成，请重新登录。", { error: true });
+  } else if (result === "expired") {
+    setStatus(sessionError, "GitHub 登录链接已过期，请重新点击登录。", { error: true });
   } else if (result === "forbidden") {
     setStatus(sessionError, "此账号没有管理权限，请切换到 gdutsen-jpg 后重新登录。", { error: true });
   } else {

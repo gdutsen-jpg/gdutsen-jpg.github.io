@@ -149,7 +149,7 @@ async function beginLogin(env) {
 
 async function hasRepositoryAccess(env, headers, fetcher) {
   const api = 'https://api.github.com/user/installations';
-  const options = { headers, redirect: 'error' };
+  const options = { headers, redirect: 'manual' };
   const installationResponse = await fetcher(api, options);
   if (!installationResponse.ok) return false;
   const { total_count: installationCount, installations } = await installationResponse.json();
@@ -180,7 +180,7 @@ async function completeLogin(request, url, env, fetcher) {
   try {
     const exchange = await fetcher('https://github.com/login/oauth/access_token', {
       method: 'POST',
-      redirect: 'error',
+      redirect: 'manual',
       headers: { Accept: 'application/json', 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({
         client_id: env.GITHUB_CLIENT_ID,
@@ -193,6 +193,7 @@ async function completeLogin(request, url, env, fetcher) {
     });
     if (!exchange.ok) return denied;
     const auth = await exchange.json();
+    if (auth.error === 'bad_verification_code') return redirect('/?error=expired', [clear]);
     if (typeof auth.access_token !== 'string' || !auth.access_token.startsWith('ghu_')) return denied;
     const headers = {
       Authorization: 'Bearer ' + auth.access_token,
@@ -200,7 +201,7 @@ async function completeLogin(request, url, env, fetcher) {
       'X-GitHub-Api-Version': '2022-11-28',
       'User-Agent': 'gomoku-album-admin',
     };
-    const userResponse = await fetcher('https://api.github.com/user', { headers, redirect: 'error' });
+    const userResponse = await fetcher('https://api.github.com/user', { headers, redirect: 'manual' });
     if (!userResponse.ok) return denied;
     const user = await userResponse.json();
     if (String(user.id) !== env.GITHUB_OWNER_ID || typeof user.login !== 'string') {
