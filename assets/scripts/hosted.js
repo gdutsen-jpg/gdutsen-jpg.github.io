@@ -8,13 +8,13 @@
     'assets/scripts/daylight-theme.js',
     'data/site-content.js?v=20261127-meat-types',
     'assets/scripts/browser-backup.js',
-    'assets/scripts/weekend-wheel.js?v=20261127-meat-types',
+    'assets/scripts/weekend-wheel.js?v=20261127-two-wheels',
     'assets/maps/travel-map-data.js',
     'assets/scripts/travel-maps.js',
   ];
   const styleFiles = [
     'assets/styles/site.css?v=20261127-stats-dm-sans',
-    'assets/styles/wheels.css?v=20261127-meat-types',
+    'assets/styles/wheels.css?v=20261127-two-wheels',
   ];
   const fonts = [
     { file: 'gomoku-pixel.woff2', license: 'OFL.txt' },

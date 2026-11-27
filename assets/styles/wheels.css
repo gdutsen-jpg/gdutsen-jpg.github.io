@@ -1,7 +1,23 @@
 .album-wheels {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0 clamp(1.25rem, 4vw, 3rem);
+  --wheel-tint: var(--daylight-tint, #e9ddef);
+  --wheel-base: #f3eef3;
+  --wheel-divider: #fffcfa;
+  --wheel-label: #443344;
+}
+
+@supports (color: color-mix(in srgb, white, black)) {
+  .album-wheels {
+    --wheel-base: color-mix(in srgb, #f3eef3 42%, var(--daylight-paper, #fcfafc));
+    --wheel-divider: color-mix(in srgb, #fffcfa 75%, var(--daylight-paper, #fcfafc));
+    --wheel-label: color-mix(in srgb, #443344 90%, var(--wheel-tint));
+  }
+
+  .album-wheels .weekend-play [role="status"] {
+    color: var(--wheel-label);
+  }
 }
 
 .album-wheels .weekend-panel {
@@ -27,27 +43,19 @@
   box-shadow: none;
 }
 
-#cuisine-spin:disabled,
-#ingredient-spin:disabled {
+#cuisine-spin:disabled {
   opacity: .55;
   cursor: not-allowed;
   transform: none;
 }
 
-#cuisine-result,
-#ingredient-result {
+#cuisine-result {
   width: 100%;
   min-height: 1.5em;
   margin: 12px 0 0;
   color: var(--accent-dark);
   font-size: 15px;
   overflow-wrap: anywhere;
-}
-
-@media (max-width: 900px) {
-  .album-wheels {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
 }
 
 @media (max-width: 680px) {
@@ -61,13 +69,11 @@
     width: min(100%, 210px);
   }
 
-  .album-wheels #cuisine-wheel .weekend-dial,
-  .album-wheels #ingredient-wheel .weekend-dial {
+  .album-wheels #cuisine-wheel .weekend-dial {
     width: min(100%, 280px);
   }
 
-  #cuisine-spin,
-  #ingredient-spin {
+  #cuisine-spin {
     max-width: 100%;
     min-height: 35px;
     padding: 6px 9px;
@@ -75,8 +81,7 @@
     white-space: normal;
   }
 
-  #cuisine-result,
-  #ingredient-result {
+  #cuisine-result {
     margin-top: 7px;
     font-size: 13px;
   }

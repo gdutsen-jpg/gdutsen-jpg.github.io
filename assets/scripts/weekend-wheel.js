@@ -4,6 +4,29 @@
   const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
   const fullTurn = 2 * Math.PI;
   const palette = ['#edd9e6', '#f5e1d7', '#e3e9d8', '#dfe7f0', '#ede0ef', '#f4e9d6', '#e7e1ef'];
+  const root = document.documentElement;
+  const themeSource = document.querySelector('.album-wheels') ?? root;
+  const canMix = window.CSS?.supports('color', 'color-mix(in srgb, white, black)');
+  let colors;
+  let colorKey;
+
+  function readWheelColors() {
+    const style = getComputedStyle(themeSource);
+    const tint = style.getPropertyValue('--wheel-tint').trim();
+    const base = style.getPropertyValue('--wheel-base').trim() || '#f3eef3';
+    const divider = style.getPropertyValue('--wheel-divider').trim() || '#fffcfa';
+    const label = style.getPropertyValue('--wheel-label').trim() || '#443344';
+    const key = [tint, base, divider, label].join('|');
+    if (key === colorKey) return false;
+    colorKey = key;
+    const sectors = canMix && tint
+      ? palette.map(color => 'color-mix(in srgb, ' + color + ' 48%, ' + tint + ')')
+      : palette;
+    colors = { base, divider, label, sectors };
+    return true;
+  }
+
+  readWheelColors();
   const wheelSettings = {
     activities: {
       name: 'Activity wheel',
@@ -16,14 +39,6 @@
       fallback: [
         '粤菜', '川菜', '湘菜', '江浙菜', '西北菜', '云贵菜', '东北菜', '火锅',
         '烧烤烤肉', '海鲜', '小吃简餐', '自助餐', '日式料理', '韩式料理', '东南亚菜', '西餐',
-      ],
-    },
-    ingredients: {
-      name: 'Ingredient wheel',
-      empty: 'No ingredients yet.',
-      fallback: [
-        '猪肉', '牛肉', '羊肉', '鸡肉', '鸭肉', '鹅肉',
-        '鱼', '虾', '蟹', '贝类', '鱿鱼', '章鱼',
       ],
     },
   };
@@ -77,7 +92,7 @@
       const radius = center - 1;
       context.beginPath();
       context.arc(center, center, radius, 0, fullTurn);
-      context.fillStyle = '#f3eef3';
+      context.fillStyle = colors.base;
       context.fill();
 
       const slice = fullTurn / Math.max(1, options.length);
@@ -90,12 +105,12 @@
         context.moveTo(center, center);
         context.arc(center, center, radius, start, start + slice);
         context.closePath();
-        context.fillStyle = palette[index % palette.length];
+        context.fillStyle = colors.sectors[index % colors.sectors.length];
         context.fill();
 
         if (options.length > 1) {
           context.lineWidth = 1;
-          context.strokeStyle = '#fffcfa';
+          context.strokeStyle = colors.divider;
           context.stroke();
         }
 
@@ -106,7 +121,7 @@
         context.save();
         context.translate(center, center);
         context.rotate(mid + (upsideDown ? Math.PI : 0));
-        context.fillStyle = '#443344';
+        context.fillStyle = colors.label;
         context.textAlign = upsideDown ? 'left' : 'right';
         context.textBaseline = 'middle';
         const inset = radius * 0.88 * (upsideDown ? -1 : 1);
@@ -167,7 +182,42 @@
     } else {
       window.addEventListener('resize', drawWheel);
     }
+    return drawWheel;
   }
 
-  document.querySelectorAll('.weekend-wheel').forEach(setupWheel);
+  const redraws = Array.from(document.querySelectorAll('.weekend-wheel'), setupWheel).filter(Boolean);
+  if (!redraws.length) return;
+
+  const themeProperties = new Set(['--daylight-paper', '--daylight-tint']);
+  const transitioning = new Set();
+  let themeFrame = 0;
+  let lastRead = -Infinity;
+
+  function queueThemeRedraw() {
+    if (!themeFrame) themeFrame = requestAnimationFrame(refreshTheme);
+  }
+
+  function refreshTheme(time) {
+    themeFrame = 0;
+    // The page interpolates daylight colors over 18 seconds. A few samples
+    // per second are enough to catch the visible palette changes.
+    if (!transitioning.size || time - lastRead >= 125) {
+      lastRead = time;
+      if (readWheelColors()) redraws.forEach(draw => draw());
+    }
+    if (transitioning.size) queueThemeRedraw();
+  }
+
+  function daylightTransition(event) {
+    if (event.target !== root || !themeProperties.has(event.propertyName)) return;
+    if (event.type === 'transitionrun') transitioning.add(event.propertyName);
+    else transitioning.delete(event.propertyName);
+    queueThemeRedraw();
+  }
+
+  root.addEventListener('transitionrun', daylightTransition);
+  root.addEventListener('transitionend', daylightTransition);
+  root.addEventListener('transitioncancel', daylightTransition);
+  // Reduced-motion transitions apply the final colors immediately.
+  new MutationObserver(queueThemeRedraw).observe(root, { attributes: true, attributeFilter: ['style'] });
 })();
