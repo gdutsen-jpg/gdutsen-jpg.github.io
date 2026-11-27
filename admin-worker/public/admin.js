@@ -8,7 +8,7 @@ const REPOSITORY = "https://github.com/gdutsen-jpg/gdutsen-jpg.github.io";
 const WHEELS = {
   activities: { label: "活动", example: "周末野餐" },
   cuisines: { label: "菜系", example: "徽菜" },
-  ingredients: { label: "肉类食材", example: "猪梅花肉" }
+  ingredients: { label: "肉类与海鲜", example: "牛肉" }
 };
 
 const account = document.getElementById("account");

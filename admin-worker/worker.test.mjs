@@ -59,7 +59,7 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
     },
     makeStore: ({ token, repository, branch, regionIds, wheelDefaults }) => {
       assert.equal(wheelDefaults.ingredients.length, 12);
-      assert.equal(wheelDefaults.ingredients.includes('羊排'), true);
+      assert.equal(wheelDefaults.ingredients.includes('蟹'), true);
       assert.equal(regionIds.world.has('JPN'), true);
       assert.equal(regionIds.china.has('CN-GD'), true);
       assert.equal(token, 'ghu_test_bearer');
