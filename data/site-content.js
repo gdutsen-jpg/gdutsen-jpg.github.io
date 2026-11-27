@@ -6,7 +6,8 @@ globalThis.GomokuPublishedContent = {
     "户外徒步",
     "拍照",
     "逛公园",
-    "兜风"
+    "兜风",
+    "城市随机徒步"
   ],
   "visited": {
     "world": [],
