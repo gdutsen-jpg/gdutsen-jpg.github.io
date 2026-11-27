@@ -37,14 +37,21 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   const requests = [];
   const mutations = [];
   let userId = 77;
-  let push = true;
+  const installation = { id: 23, account: { id: 55 }, permissions: { contents: 'write' }, repository_selection: 'selected' };
+  const repository = { id: 78, full_name: 'owner/pages', permissions: { push: true } };
+  let installations = [installation];
+  let repositories = [repository];
   const worker = createAdminWorker({
     fetcher: async (url, options) => {
       requests.push({ url, options });
       if (url.endsWith('/access_token')) return Response.json({ access_token: 'ghu_test_bearer', expires_in: 28800 });
       if (url.endsWith('/user')) return Response.json({ id: userId, login: 'owner' });
-      assert.equal(url, 'https://api.github.com/repos/owner/pages');
-      return Response.json({ id: 78, permissions: { push } });
+      assert.equal(options.headers.Authorization, 'Bearer ghu_test_bearer');
+      if (url === 'https://api.github.com/user/installations') {
+        return Response.json({ total_count: installations.length, installations });
+      }
+      assert.equal(url, 'https://api.github.com/user/installations/23/repositories');
+      return Response.json({ total_count: repositories.length, repositories });
     },
     makeStore: ({ token, repository, branch }) => {
       assert.equal(token, 'ghu_test_bearer');
@@ -76,9 +83,30 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   const challenge = new Uint8Array(await crypto.subtle.digest('SHA-256', verifier));
   assert.equal(Buffer.from(challenge).toString('base64url'), auth.searchParams.get('code_challenge'));
   userId = 55;
-  push = false;
-  assert.equal((await request(worker, callback, options)).headers.get('Location'), '/?error=repository');
-  push = true;
+  const restrictedInstallations = [
+    [],
+    [{ ...installation, account: { id: 77 } }],
+    [{ ...installation, permissions: { contents: 'read' } }],
+    [{ ...installation, repository_selection: 'all' }],
+    [installation, { ...installation, id: 24 }],
+  ];
+  for (const candidate of restrictedInstallations) {
+    installations = candidate;
+    assert.equal((await request(worker, callback, options)).headers.get('Location'), '/?error=repository');
+  }
+  installations = [installation];
+  const restrictedRepositories = [
+    [],
+    [{ ...repository, id: 79 }],
+    [{ ...repository, full_name: 'owner/wrong' }],
+    [{ ...repository, permissions: { push: false } }],
+    [repository, { ...repository, id: 79, full_name: 'owner/another' }],
+  ];
+  for (const candidate of restrictedRepositories) {
+    repositories = candidate;
+    assert.equal((await request(worker, callback, options)).headers.get('Location'), '/?error=repository');
+  }
+  repositories = [repository];
   const login = await request(worker, callback, options);
   assert.equal(login.headers.get('Location'), '/');
   const active = login.headers.getSetCookie().find((value) => value.startsWith('__Host-gomoku-session='));

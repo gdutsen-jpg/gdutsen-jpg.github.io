@@ -147,6 +147,29 @@ async function beginLogin(env) {
   return redirect(url.toString(), [cookie(OAUTH_COOKIE, ticket, OAUTH_SECONDS)]);
 }
 
+async function hasRepositoryAccess(env, headers, fetcher) {
+  const api = 'https://api.github.com/user/installations';
+  const options = { headers, redirect: 'error' };
+  const installationResponse = await fetcher(api, options);
+  if (!installationResponse.ok) return false;
+  const { total_count: installationCount, installations } = await installationResponse.json();
+  if (installationCount !== 1 || !Array.isArray(installations) || installations.length !== 1) return false;
+  const [installation] = installations;
+  if (String(installation?.account?.id) !== env.GITHUB_OWNER_ID ||
+      installation.permissions?.contents !== 'write' || installation.repository_selection !== 'selected' ||
+      !Number.isSafeInteger(installation.id) || installation.id <= 0 || installation.suspended_at) {
+    return false;
+  }
+
+  const repositoryResponse = await fetcher(`${api}/${installation.id}/repositories`, options);
+  if (!repositoryResponse.ok) return false;
+  const { total_count: repositoryCount, repositories } = await repositoryResponse.json();
+  if (repositoryCount !== 1 || !Array.isArray(repositories) || repositories.length !== 1) return false;
+  const [repository] = repositories;
+  return String(repository?.id) === env.GITHUB_REPOSITORY_ID && repository.full_name === env.GITHUB_REPOSITORY &&
+    repository.permissions?.push === true;
+}
+
 async function completeLogin(request, url, env, fetcher) {
   const clear = cookie(OAUTH_COOKIE, '', 0);
   const denied = redirect('/?error=auth', [clear]);
@@ -183,12 +206,7 @@ async function completeLogin(request, url, env, fetcher) {
     if (String(user.id) !== env.GITHUB_OWNER_ID || typeof user.login !== 'string') {
       return redirect('/?error=forbidden', [clear]);
     }
-    const repoResponse = await fetcher('https://api.github.com/repos/' + env.GITHUB_REPOSITORY, {
-      headers, redirect: 'error',
-    });
-    if (!repoResponse.ok) return redirect('/?error=repository', [clear]);
-    const repo = await repoResponse.json();
-    if (String(repo.id) !== env.GITHUB_REPOSITORY_ID || !repo.permissions?.push) {
+    if (!await hasRepositoryAccess(env, headers, fetcher)) {
       return redirect('/?error=repository', [clear]);
     }
     const lifetime = Number.isFinite(auth.expires_in) ? Math.min(auth.expires_in, SESSION_SECONDS) : SESSION_SECONDS;
