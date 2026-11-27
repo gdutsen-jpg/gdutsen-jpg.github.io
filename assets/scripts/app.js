@@ -5,7 +5,8 @@ const $ = id => document.getElementById(id);
 const icon = name => `<svg class="icon" aria-hidden="true"><use href="#i-${name}"/></svg>`;
 const h = C.escapeHTML;
 const originalHTML = '<!doctype html>\n' + document.documentElement.outerHTML;
-const state = C.validateAlbum(JSON.parse($('embedded-state').textContent));
+const loadEmbeddedPhotos = globalThis.loadAlbumEmbeddedPhotos;
+const state = C.validateAlbum(JSON.parse($('embedded-state').textContent), { photoFiles: Boolean(loadEmbeddedPhotos) });
 const heroEyebrow = $('couple-eyebrow');
 const defaultHeroEyebrow = heroEyebrow.textContent;
 const heroDescription = $('hero-description');
@@ -40,6 +41,17 @@ const calendarFormatter = new Intl.DateTimeFormat('en', {month:'short',day:'nume
 const weekdayFormatter = new Intl.DateTimeFormat('en', {weekday:'short',timeZone:'UTC'});
 function readableDate(date) { const value=new Date(date+'T12:00:00Z');return `${calendarFormatter.format(value)} · ${weekdayFormatter.format(value)}`; }
 function memoryTitle(entry) { return entry.title || 'A little memory'; }
+function photoSource(photo) { return photo.file ?? photo.dataUrl; }
+function coverIndex(entry) {
+  const index = entry.photos.findIndex(photo => photo.id === entry.coverPhotoId);
+  return index < 0 ? 0 : index;
+}
+function timelinePhotoIndexes(entry) {
+  if (!entry.photos.length) return [];
+  const cover = coverIndex(entry);
+  const firstIndexes = entry.photos.slice(0,6).map((_,index) => index);
+  return [cover, ...firstIndexes.filter(index => index !== cover)].slice(0,6);
+}
 function closeDialog(id) {
   const dialog = $(id);
   if (!dialog?.open) return;
@@ -125,31 +137,35 @@ function renderRecords() {
   }
   let content = `<p class="result-count">${countLabel(entries.length,'memory','memories')} to keep${query||filter!=='全部'?' · Filtered results':''}</p>`;
   if (view === 'wall') {
-    const photos = entries.flatMap(e=>e.photos.map((photo,i)=>({entry:e,photo,index:i})));
-    if (!photos.length) {
+    const memoriesWithPhotos = entries.filter(entry => entry.photos.length);
+    if (!memoriesWithPhotos.length) {
       $('records').innerHTML = `<div class="empty">${icon('photo')}<h3>A story today, a photo whenever.</h3><p>View the written memories on the timeline.</p><button class="btn" data-action="timeline">Back to the timeline</button></div>`; return;
     }
     const coverEntryId = state.entries.find(entry => entry.title === '光明初遇' && entry.date === '2026-11-22')?.id;
-    const cards = photos.map(({entry, photo, index}) => {
-      const illustrated = firstMeetingCover && entry.id === coverEntryId && index === 0;
-      const thumbnail = illustrated ? firstMeetingCover : photo.dataUrl;
+    const cards = memoriesWithPhotos.map(entry => {
+      const index = coverIndex(entry);
+      const illustrated = firstMeetingCover && entry.id === coverEntryId && !entry.coverPhotoId;
+      const thumbnail = illustrated ? firstMeetingCover : photoSource(entry.photos[index]);
       const title = h(memoryTitle(entry));
+      const extraPhotos = entry.photos.length - 1;
       return `<article class="wall-card">
         <button class="photo-button" data-action="photo" data-id="${h(entry.id)}" data-index="${index}" aria-label="View ${title}, photo ${index + 1}">
           <img src="${h(thumbnail)}" alt="${title}" loading="lazy" decoding="async">
+          ${extraPhotos ? `<span class="photo-more">+${extraPhotos}</span>` : ''}
         </button>
         <div class="wall-caption">${title}</div>
         <p class="wall-date">${readableDate(entry.date)} · ${h(categoryLabel(entry.category))}</p>
       </article>`;
     });
-    content = `<p class="result-count">${countLabel(photos.length,'photo')} · From ${countLabel(entries.filter(entry=>entry.photos.length).length,'memory','memories')}</p><div class="photo-wall">${cards.join('')}</div>`;
+    const photoCount = memoriesWithPhotos.reduce((count, entry) => count + entry.photos.length, 0);
+    content = `<p class="result-count">${countLabel(photoCount,'photo')} · From ${countLabel(memoriesWithPhotos.length,'memory','memories')}</p><div class="photo-wall">${cards.join('')}</div>`;
   } else {
     let year = '';
     for (const e of entries) {
       const currentYear = e.date.slice(0,4);
       if (currentYear !== year) { if (year) content += '</div>'; content += `<h3 class="year-heading">${currentYear}</h3><div class="timeline">`; year=currentYear; }
-      const pictures = e.photos.slice(0,6);
-      content += `<article class="memory"><div class="memory-top"><div class="memory-meta"><time datetime="${e.date}">${readableDate(e.date)}</time><span class="tag">${h(categoryLabel(e.category))}</span></div></div><h3>${h(memoryTitle(e))}</h3>${e.story?`<p class="memory-text">${h(e.story)}</p>`:''}${e.location?`<div class="memory-location">${icon('pin')}${h(e.location)}</div>`:''}${pictures.length?`<div class="memory-pictures ${pictures.length===1?'single':''}">${pictures.map((p,i)=>`<button class="photo-button" data-action="photo" data-id="${h(e.id)}" data-index="${i}" aria-label="View ${h(memoryTitle(e))}, photo ${i+1}"><img src="${h(p.dataUrl)}" alt="${h(memoryTitle(e))}, photo ${i+1}" loading="lazy" decoding="async">${i===5&&e.photos.length>6?`<span class="photo-more">+${e.photos.length-6}</span>`:''}</button>`).join('')}</div>`:''}</article>`;
+      const pictures = timelinePhotoIndexes(e);
+      content += `<article class="memory"><div class="memory-top"><div class="memory-meta"><time datetime="${e.date}">${readableDate(e.date)}</time><span class="tag">${h(categoryLabel(e.category))}</span></div></div><h3>${h(memoryTitle(e))}</h3>${e.story?`<p class="memory-text">${h(e.story)}</p>`:''}${e.location?`<div class="memory-location">${icon('pin')}${h(e.location)}</div>`:''}${pictures.length?`<div class="memory-pictures ${pictures.length===1?'single':''}">${pictures.map((i,position)=>`<button class="photo-button" data-action="photo" data-id="${h(e.id)}" data-index="${i}" aria-label="View ${h(memoryTitle(e))}, photo ${i+1}"><img src="${h(photoSource(e.photos[i]))}" alt="${h(memoryTitle(e))}, photo ${i+1}" loading="lazy" decoding="async">${position===pictures.length-1&&e.photos.length>pictures.length?`<span class="photo-more">+${e.photos.length-pictures.length}</span>`:''}</button>`).join('')}</div>`:''}</article>`;
     }
     content += '</div>';
   }
@@ -165,7 +181,7 @@ function openPhoto(entryId,index) {
 }
 function renderLightbox() {
   const p=lightboxPhotos[lightboxIndex];if(!p)return;
-  $('lightbox-title').textContent=p.title;$('lightbox-image').src=p.dataUrl;$('lightbox-image').alt=p.name||p.title;
+  $('lightbox-title').textContent=p.title;$('lightbox-image').src=photoSource(p);$('lightbox-image').alt=p.name||p.title;
   $('lightbox-count').textContent=`${readableDate(p.date)} · ${lightboxIndex+1} / ${lightboxPhotos.length}`;
   $('previous-photo').hidden=lightboxPhotos.length<=1;$('next-photo').hidden=lightboxPhotos.length<=1;
 }
@@ -177,30 +193,62 @@ function downloadBlob(blob,name) {
   const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 function filenameBase(){return safeFilename(state.settings.nameOne&&state.settings.nameTwo?`${state.settings.nameOne} and ${state.settings.nameTwo} - Our Days`:'Falling in Love with Gomoku');}
-function makeBackup(){return{format:'our-days-backup',version:1,exportedAt:new Date().toISOString(),album:state};}
+function makeBackup(album){return{format:'our-days-backup',version:1,exportedAt:new Date().toISOString(),album};}
 function markExported(name){$('export-message').textContent=`Requested a download of “${name}”. Check your browser downloads to confirm it was saved, and keep the latest copy.`;$('export-message').hidden=false;toast('Your file is ready. Check your browser downloads to confirm it was saved.');}
-function exportJSON(){try{const name=`${filenameBase()}_Backup_${C.today()}.json`;downloadBlob(new Blob([JSON.stringify(makeBackup())],{type:'application/json;charset=utf-8'}),name);markExported(name);}catch(error){toast(`Could not create the backup: ${error.message}`,true);}}
-function downloadStandalone(template){
-  const json=JSON.stringify(state).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
+function archiveAlbum() { return loadEmbeddedPhotos ? loadEmbeddedPhotos(state) : state; }
+async function exportJSON() {
+  const button = $('export-json');
+  button.disabled = true;
+  try {
+    const album = await archiveAlbum();
+    const name = `${filenameBase()}_Backup_${C.today()}.json`;
+    downloadBlob(new Blob([JSON.stringify(makeBackup(album))],{type:'application/json;charset=utf-8'}),name);
+    markExported(name);
+  } catch (error) {
+    toast(`Could not create the backup: ${error.message}`,true);
+  } finally {
+    button.disabled = false;
+  }
+}
+function downloadStandalone(template, album){
+  const json=JSON.stringify(album).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029');
   const html=template.replace(/(<script id="embedded-state" type="application\/json">)[\s\S]*?(<\/script>)/,(_match,start,end)=>start+json+end);
   const name=`${filenameBase()}_Keepsake_${C.today()}.html`;downloadBlob(new Blob([html],{type:'text/html;charset=utf-8'}),name);markExported(name);
 }
-function exportHTML(){
-  const reportError=error=>toast(`Could not create the standalone page: ${error.message}`,true);
-  const build=globalThis.buildAlbumStandaloneDocument;
-  if(!build){
-    try{downloadStandalone(originalHTML);}catch(error){reportError(error);}
-    return;
+async function exportHTML() {
+  const button = $('export-html');
+  button.disabled = true;
+  try {
+    const build = globalThis.buildAlbumStandaloneDocument;
+    const [template, album] = await Promise.all([build ? build(originalHTML) : originalHTML, archiveAlbum()]);
+    downloadStandalone(template, album);
+  } catch (error) {
+    toast(`Could not create the standalone page: ${error.message}`,true);
+  } finally {
+    button.disabled = false;
   }
-  const button=$('export-html');
-  button.disabled=true;
-  build(originalHTML).then(downloadStandalone).catch(reportError).finally(()=>{button.disabled=false;});
 }
 $('export-json').addEventListener('click',exportJSON);$('export-html').addEventListener('click',exportHTML);
-$('download-photo').addEventListener('click',()=>{
-  const p=lightboxPhotos[lightboxIndex];if(!p)return;
-  const [header,base64]=p.dataUrl.split(','),bytes=Uint8Array.from(atob(base64),c=>c.charCodeAt(0)),mime=header.match(/data:([^;]+)/)[1],extension=mime.split('/')[1].replace('jpeg','jpg');
-  downloadBlob(new Blob([bytes],{type:mime}),`${safeFilename(p.title)}_${lightboxIndex+1}.${extension}`);
+$('download-photo').addEventListener('click',async () => {
+  const p = lightboxPhotos[lightboxIndex];
+  if (!p) return;
+  const index = lightboxIndex + 1;
+  try {
+    if (p.file) {
+      const response = await fetch(new URL(p.file, document.baseURI), { mode: 'same-origin', redirect: 'error' });
+      if (!response.ok) throw new Error(`The photo returned HTTP ${response.status}.`);
+      const extension = p.file.split('.').pop();
+      downloadBlob(await response.blob(), `${safeFilename(p.title)}_${index}.${extension}`);
+      return;
+    }
+    const [header,base64] = p.dataUrl.split(',');
+    const bytes = Uint8Array.from(atob(base64),c=>c.charCodeAt(0));
+    const mime = header.match(/data:([^;]+)/)[1];
+    const extension = mime.split('/')[1].replace('jpeg','jpg');
+    downloadBlob(new Blob([bytes],{type:mime}),`${safeFilename(p.title)}_${index}.${extension}`);
+  } catch (error) {
+    toast(`Could not download the photo: ${error.message}`,true);
+  }
 });
 function openBackup(){
   $('backup-summary').textContent=`This book holds ${countLabel(state.entries.length,'memory','memories')} and ${countLabel(state.entries.reduce((n,e)=>n+e.photos.length,0),'photo')}. Save a copy to keep them close, wherever life takes you.`;

@@ -3,8 +3,8 @@
 
   const photoFile = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
   const scriptFiles = [
-    'assets/scripts/core.js',
-    'assets/scripts/app.js',
+    'assets/scripts/core.js?v=20261127-cover',
+    'assets/scripts/app.js?v=20261127-cover',
     'assets/scripts/daylight-theme.js',
     'data/site-content.js',
     'assets/scripts/browser-backup.js',
@@ -41,9 +41,7 @@
     });
   }
 
-  async function loadAlbum() {
-    const source = await (await readFile('data/album.json')).json();
-    if (!Array.isArray(source?.entries)) throw new Error('The archive has no record list.');
+  globalThis.loadAlbumEmbeddedPhotos = async function (album) {
     const files = new Map();
 
     async function loadPhoto(photo) {
@@ -58,13 +56,12 @@
     }
 
     const entries = [];
-    for (const entry of source.entries) {
-      if (!Array.isArray(entry?.photos)) throw new Error('An archive record has no photo list.');
+    for (const entry of album.entries) {
       const photos = await Promise.all(entry.photos.map(loadPhoto));
       entries.push({ ...entry, photos });
     }
-    return globalThis.AlbumCore.validateAlbum({ ...source, entries });
-  }
+    return globalThis.AlbumCore.validateAlbum({ ...album, entries });
+  };
 
   globalThis.buildAlbumStandaloneDocument = async function () {
     const copy = new DOMParser().parseFromString(pageTemplate, 'text/html');
@@ -117,7 +114,8 @@
   }
 
   async function start() {
-    const album = await loadAlbum();
+    const source = await (await readFile('data/album.json')).json();
+    const album = globalThis.AlbumCore.validateAlbum(source, { photoFiles: true });
     const embedded = document.getElementById('embedded-state');
     embedded.textContent = JSON.stringify(album).replace(/</g, '\\u003c');
     await loadApp();

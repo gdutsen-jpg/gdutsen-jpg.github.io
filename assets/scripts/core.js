@@ -6,6 +6,7 @@
   const MAX_ENTRIES = 5000;
   const MAX_PHOTO_CHARS = 36 * 1024 * 1024;
   const MAX_TOTAL_PHOTO_CHARS = 400 * 1024 * 1024;
+  const PHOTO_FILE = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
 
   function today() {
     const now = new Date();
@@ -84,7 +85,7 @@
     return value;
   }
 
-  function validateAlbum(input) {
+  function validateAlbum(input, { photoFiles = false } = {}) {
     const album = object(input, 'Album');
     if (album.schemaVersion !== 1) invalid('This backup version is not supported.');
     const albumId = identifier(album.albumId, 'Album ID');
@@ -114,7 +115,7 @@
       if (!validDate(entry.date)) invalid(label + ' has an invalid date or a date outside the supported range.');
       if (!CATEGORIES.has(entry.category)) invalid(label + ' has an unsupported category.');
       if (typeof entry.favorite !== 'boolean') invalid(label + ' must have a true or false favorite flag.');
-      if (!Array.isArray(entry.photos) || entry.photos.length > 40) invalid(label + ' must have an array of no more than 40 photos.');
+      if (!Array.isArray(entry.photos)) invalid(label + ' must have an array of photos.');
       const photoIds = new Set();
       const photos = entry.photos.map(function (rawPhoto, photoIndex) {
         const photoLabel = 'Photo ' + (photoIndex + 1) + ' in ' + label;
@@ -122,6 +123,11 @@
         const photoId = identifier(photo.id, photoLabel + ' ID');
         if (photoIds.has(photoId)) invalid(label + ' contains duplicate photo IDs.');
         photoIds.add(photoId);
+        const name = string(photo.name, 255, photoLabel + ' name', false, false);
+        if (photoFiles) {
+          if (typeof photo.file !== 'string' || !PHOTO_FILE.test(photo.file)) invalid(photoLabel + ' has an invalid archive path.');
+          return { id: photoId, name: name, file: photo.file };
+        }
         if (typeof photo.dataUrl !== 'string' || photo.dataUrl.length > MAX_PHOTO_CHARS) {
           invalid(photoLabel + ' is too large or has invalid image data.');
         }
@@ -136,8 +142,10 @@
         }
         totalPhotoChars += photo.dataUrl.length;
         if (totalPhotoChars > MAX_TOTAL_PHOTO_CHARS) invalid('Total photo data exceeds 400 MB. Please keep your photos in smaller albums.');
-        return { id: photoId, name: string(photo.name, 255, photoLabel + ' name', false, false), dataUrl: photo.dataUrl };
+        return { id: photoId, name: name, dataUrl: photo.dataUrl };
       });
+      const coverPhotoId = entry.coverPhotoId;
+      if (coverPhotoId != null && !photoIds.has(coverPhotoId)) invalid(label + ' has an invalid cover photo ID.');
       return {
         id: id,
         date: entry.date,
@@ -147,6 +155,7 @@
         category: entry.category,
         favorite: entry.favorite,
         photos: photos,
+        ...(coverPhotoId != null ? { coverPhotoId: coverPhotoId } : {}),
         updatedAt: timestamp(entry.updatedAt, label + ' update time')
       };
     });
