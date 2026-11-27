@@ -1,7 +1,7 @@
 (function (root) {
   'use strict';
 
-  const CATEGORIES = new Set(['日常', '约会', '旅行', '纪念日', '心动']);
+  const CATEGORIES = new Set(['日常', '约会', '旅行', '纪念日', '心动', '留言墙']);
   const DAY_MS = 86400000;
   const MAX_ENTRIES = 5000;
   const MAX_PHOTO_CHARS = 36 * 1024 * 1024;

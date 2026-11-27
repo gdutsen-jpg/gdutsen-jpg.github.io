@@ -18,7 +18,7 @@ let lightboxPhotos = [], lightboxIndex = 0, toastTimer;
 // Keep the original category keys so existing records and backups stay compatible.
 const categoryLabels = Object.freeze({
   '全部': 'All', '日常': 'Daily', '约会': 'Dates', '旅行': 'Trips',
-  '纪念日': 'Anniversaries', '心动': 'Little Sparks', '收藏': 'Favorites'
+  '纪念日': 'Anniversaries', '心动': 'Little Sparks', '留言墙': 'Message Wall', '收藏': 'Favorites'
 });
 const categoryLanguageKey = 'our-days-category-language';
 let categoryLanguage = 'en';
@@ -129,6 +129,11 @@ function filteredEntries() {
 function renderRecords() {
   const entries = filteredEntries();
   if (!entries.length) {
+    if (filter === '留言墙' && !query.trim()) {
+      const message = categoryLanguage === 'zh' ? '还没有留言。' : 'No messages yet.';
+      $('records').innerHTML = `<div class="empty">${icon('book')}<h3>${message}</h3></div>`;
+      return;
+    }
     const emptyAll = !state.entries.length;
     $('records').innerHTML = emptyAll
       ? `<div class="empty">${icon('photo')}<h3>No published memories yet.</h3></div>`
@@ -294,7 +299,11 @@ $('browse-button').addEventListener('click',()=>$('stories').scrollIntoView({beh
 function setView(next){view=next;render();}
 $('timeline-tab').addEventListener('click',()=>setView('timeline'));$('wall-tab').addEventListener('click',()=>setView('wall'));
 [$('timeline-tab'),$('wall-tab')].forEach(tab=>tab.addEventListener('keydown',event=>{if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();setView(view==='timeline'?'wall':'timeline');$(view==='timeline'?'timeline-tab':'wall-tab').focus();}}));
-document.querySelectorAll('[data-filter]').forEach(b=>b.addEventListener('click',()=>{filter=b.dataset.filter;render();}));
+document.querySelectorAll('[data-filter]').forEach(button => button.addEventListener('click', () => {
+  filter = button.dataset.filter;
+  if (filter === '留言墙') view = 'timeline';
+  render();
+}));
 $('search').addEventListener('input',()=>{query=$('search').value;renderRecords();});$('sort-order').addEventListener('change',()=>{direction=$('sort-order').value;renderRecords();});
 
 try {
