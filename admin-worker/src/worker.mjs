@@ -5,11 +5,13 @@ const OAUTH_COOKIE = '__Host-gomoku-oauth';
 const OAUTH_SECONDS = 600;
 const SESSION_SECONDS = 3600;
 const MAX_REQUEST_BYTES = 1_450_000;
+const MAX_BATCH_REQUEST_BYTES = 16 * 1024 * 1024;
+const PHOTO_STAGE_SECONDS = 24 * 3600;
 const encoder = new TextEncoder();
 const decoder = new TextDecoder();
 const securityHeaders = {
   'Cache-Control': 'no-store',
-  'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
+  'Content-Security-Policy': "default-src 'none'; script-src 'self'; style-src 'self'; font-src 'self'; img-src 'self' data: blob: https://raw.githubusercontent.com; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'none'",
   'Referrer-Policy': 'no-referrer',
   'X-Content-Type-Options': 'nosniff',
   'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
@@ -55,12 +57,12 @@ async function seal(env, payload) {
   return encode(iv) + '.' + encode(new Uint8Array(data));
 }
 
-async function unseal(env, value, kind) {
+async function unseal(env, value, kind, decryptionKey) {
   if (!value || value.length > 3200) return null;
   try {
     const [iv, data, extra] = value.split('.');
     if (!data || extra !== undefined || decode(iv).length !== 12) return null;
-    const key = await crypto.subtle.importKey('raw', decode(env.SESSION_KEY), 'AES-GCM', false, ['decrypt']);
+    const key = decryptionKey ?? await crypto.subtle.importKey('raw', decode(env.SESSION_KEY), 'AES-GCM', false, ['decrypt']);
     const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: decode(iv) }, key, decode(data));
     const payload = JSON.parse(decoder.decode(plain));
     return payload.kind === kind && payload.expiresAt > Date.now() ? payload : null;
@@ -90,12 +92,12 @@ function isReady(env, url) {
     Boolean(env.GITHUB_CLIENT_ID && env.GITHUB_CLIENT_SECRET && env.SESSION_KEY);
 }
 
-async function readJson(request) {
+async function readJson(request, maxBytes = MAX_REQUEST_BYTES) {
   const contentType = request.headers.get('Content-Type') || '';
   if (contentType.split(';')[0].trim().toLowerCase() !== 'application/json') {
     throw new RequestError(415, 'Send the request as JSON.');
   }
-  if (Number(request.headers.get('Content-Length')) > MAX_REQUEST_BYTES) {
+  if (Number(request.headers.get('Content-Length')) > maxBytes) {
     throw new RequestError(413, 'The photo exceeds the upload size.');
   }
   if (!request.body) throw new RequestError(400, 'The request is empty.');
@@ -108,7 +110,7 @@ async function readJson(request) {
       const { done, value } = await reader.read();
       if (done) break;
       byteCount += value.byteLength;
-      if (byteCount > MAX_REQUEST_BYTES) {
+      if (byteCount > maxBytes) {
         await reader.cancel();
         throw new RequestError(413, 'The photo exceeds the upload size.');
       }
@@ -125,6 +127,19 @@ async function readJson(request) {
     reader.releaseLock();
   }
 }
+
+async function readPhotoReceipts(env, receipts) {
+  if (!Array.isArray(receipts) || !receipts.length || receipts.some((receipt) => typeof receipt !== 'string')) {
+    throw new RequestError(422, '请选择要发布的照片。');
+  }
+  const key = await crypto.subtle.importKey('raw', decode(env.SESSION_KEY), 'AES-GCM', false, ['decrypt']);
+  const staged = await Promise.all(receipts.map((receipt) => unseal(env, receipt, 'photo', key)));
+  if (staged.some((upload) => !upload)) {
+    throw new RequestError(422, '照片暂存已过期，请重新选择照片。');
+  }
+  return staged.map(({ photo, blobSha }) => ({ photo, blobSha }));
+}
+
 
 async function beginLogin(env) {
   const verifier = randomToken();
@@ -254,7 +269,23 @@ export function createAdminWorker({ fetcher = fetch, makeStore = createGitHubSto
       const store = makeStore({ token: session.token, repository: env.GITHUB_REPOSITORY, branch: env.GITHUB_BRANCH, fetcher });
       if (method === 'GET' && pathname === '/api/content') return json(await store.getContent());
       if (method === 'POST' && pathname === '/api/activities') return json(await store.addActivity(await readJson(request)));
-      if (method === 'POST' && pathname === '/api/memories') return json(await store.addMemoryPhotos(await readJson(request)));
+      if (method === 'POST' && pathname === '/api/activities/remove') return json(await store.removeActivity(await readJson(request)));
+      if (method === 'POST' && pathname === '/api/photos') {
+        const { photo, blobSha } = await store.stageMemoryPhoto(await readJson(request));
+        const receipt = await seal(env, {
+          kind: 'photo',
+          photo,
+          blobSha,
+          expiresAt: Date.now() + PHOTO_STAGE_SECONDS * 1000,
+        });
+        return json({ id: photo.id, receipt });
+      }
+      if (method === 'POST' && pathname === '/api/memories') {
+        const input = await readJson(request, MAX_BATCH_REQUEST_BYTES);
+        if (!Object.hasOwn(input, 'photoReceipts')) return json(await store.addMemoryPhotos(input));
+        return json(await store.addMemoryPhotoBatch(input, await readPhotoReceipts(env, input.photoReceipts)));
+      }
+      if (method === 'POST' && pathname === '/api/memories/cover') return json(await store.setMemoryCover(await readJson(request)));
       return json({ error: 'This route is unavailable.' }, 404);
     }
 

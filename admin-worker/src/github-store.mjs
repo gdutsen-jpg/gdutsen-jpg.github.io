@@ -2,10 +2,10 @@ const ALBUM_PATH = 'data/album.json';
 const CONTENT_PATH = 'data/site-content.js';
 const CONTENT_ASSIGNMENT = 'globalThis.GomokuPublishedContent';
 const MAX_ENTRIES = 5000;
-const MAX_PHOTOS_PER_ENTRY = 40;
 const MAX_PHOTO_BYTES = 1024 * 1024;
 const CATEGORIES = new Set(['日常', '约会', '旅行', '纪念日', '心动']);
 const SHA = /^[a-f0-9]{40}$/;
+const PHOTO_PATH = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
 const RAW_MEDIA_TYPE = 'application/vnd.github.raw+json';
 
 function error(status, message) {
@@ -34,6 +34,12 @@ function operationKey(value) {
     throw error(400, '提交编号无效，请刷新后再次提交。');
   }
   return value;
+}
+
+function identifier(value, label) {
+  const id = inputText(value, { label, max: 150, trim: false, required: true });
+  if (/\s|[\u0000-\u001f\u007f]/.test(id)) throw error(422, `${label}无效。`);
+  return id;
 }
 
 function validDate(value) {
@@ -143,8 +149,8 @@ function parseAlbum(source) {
   if (!record(album) || album.schemaVersion !== 1 || !record(album.settings) || !timestamp(album.updatedAt) ||
       !Array.isArray(album.entries) || !album.entries.every((entry) => record(entry) &&
         typeof entry.id === 'string' && typeof entry.title === 'string' && validDate(entry.date) && timestamp(entry.updatedAt) &&
-        Array.isArray(entry.photos) && entry.photos.every((photo) => record(photo) &&
-          typeof photo.id === 'string' && typeof photo.file === 'string'))) {
+        Array.isArray(entry.photos) && entry.photos.every((photo) => record(photo) && typeof photo.id === 'string' &&
+          typeof photo.name === 'string' && typeof photo.file === 'string' && PHOTO_PATH.test(photo.file)))) {
     throw error(502, message);
   }
   return album;
@@ -174,6 +180,18 @@ function gitSha(value) {
 
 function gitBlob(path, payload) {
   return { path, mode: '100644', type: 'blob', ...payload };
+}
+
+function explicitCoverId(entry) {
+  return entry.photos.find((photo) => photo.id === entry.coverPhotoId)?.id ?? null;
+}
+
+function albumChange(album, entry, operationId) {
+  const timestamp = Math.max(Date.now(), Math.max(album.updatedAt, entry.updatedAt ?? 0) + 1);
+  entry.updatedAt = timestamp;
+  album.revision = `published-${operationId}`;
+  album.updatedAt = timestamp;
+  return gitBlob(ALBUM_PATH, { content: `${JSON.stringify(album, null, 2)}\n` });
 }
 
 export function createGitHubStore({ token, repository, branch = 'main', fetcher = fetch }) {
@@ -273,88 +291,180 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
     ]);
     const { activities } = parseContent(contentSource);
     const { entries } = parseAlbum(albumSource);
-    const memories = entries.map(({ id, title, date, photos }) => ({ id, title, date, photoCount: photos.length }));
+    const rawRoot = `https://raw.githubusercontent.com/${repository.split('/').map(encodeURIComponent).join('/')}/${head}`;
+    const memories = entries.map((entry) => ({
+      id: entry.id,
+      title: entry.title,
+      date: entry.date,
+      photoCount: entry.photos.length,
+      coverPhotoId: explicitCoverId(entry),
+      photos: entry.photos.map(({ id, name, file }) => ({
+        id,
+        name,
+        url: `${rawRoot}/${file.split('/').map(encodeURIComponent).join('/')}`,
+      })),
+    }));
     memories.sort((left, right) => right.date.localeCompare(left.date));
     return { activities, memories };
   }
 
-  async function addActivity(input) {
+  async function changeActivity(input, action) {
     const { operationId: operationInput, name: nameInput } = inputRecord(input);
     const operationId = operationKey(operationInput);
     const name = inputText(nameInput, { label: '活动名称', max: 60, required: true });
     if (/[\r\n]/.test(name)) throw error(422, '活动名称请写在一行内。');
 
+    const remove = action === 'Remove';
     return writeFiles(async (head) => {
       const content = parseContent(await readFile(CONTENT_PATH, head));
-      if (content.activities.some((activity) => activity.trim() === name)) return [];
-      content.activities.push(name);
+      const otherActivities = content.activities.filter((activity) => activity.trim() !== name);
+      const exists = otherActivities.length !== content.activities.length;
+      if ((remove && !exists) || (!remove && exists)) return [];
+      content.activities = remove ? otherActivities : [...content.activities, name];
       const source = `${CONTENT_ASSIGNMENT} = ${JSON.stringify(content, null, 2)};\n`;
       return [gitBlob(CONTENT_PATH, { content: source })];
-    }, `Add activity from album admin\n\nOperation: ${operationId}`);
+    }, `${action} activity from album admin\n\nOperation: ${operationId}`);
+  }
+
+  function addActivity(input) {
+    return changeActivity(input, 'Add');
+  }
+
+  function removeActivity(input) {
+    return changeActivity(input, 'Remove');
+  }
+
+  function memoryTarget(input) {
+    const { operationId: operationInput, entryId, date, title = '', story = '', location = '',
+      category = '日常' } = inputRecord(input);
+    const operationId = operationKey(operationInput);
+    if (entryId !== undefined) {
+      return { operationId, targetId: identifier(entryId, '回忆编号'), newEntry: null };
+    }
+    if (!validDate(date)) throw error(422, '请选择 1900 年至 9999 年之间的有效日期。');
+    if (!CATEGORIES.has(category)) throw error(422, '请选择有效的回忆分类。');
+    const targetId = 'published-' + operationId;
+    const newEntry = {
+      id: targetId,
+      date,
+      title: inputText(title, { label: '回忆标题', max: 100 }),
+      story: inputText(story, { label: '回忆内容', max: 10000, trim: false }),
+      location: inputText(location, { label: '地点', max: 150 }),
+      category,
+      favorite: false,
+      photos: [],
+    };
+    return { operationId, targetId, newEntry };
+  }
+
+  async function uploadBlob(content) {
+    const blob = await request('/git/blobs', { method: 'POST', body: { encoding: 'base64', content } });
+    return gitSha(blob?.sha);
+  }
+
+  async function stageMemoryPhoto(input) {
+    const { operationId: operationInput } = inputRecord(input);
+    const operationId = operationKey(operationInput);
+    const { photo, content } = await preparePhoto(input, operationId);
+    return { photo, blobSha: await uploadBlob(content) };
+  }
+
+  async function addMemoryPhotoBatch(input, stagedPhotos) {
+    const target = memoryTarget(input);
+    const coverInput = input.coverPhotoId ?? null;
+    const coverPhotoId = coverInput === null ? null : identifier(coverInput, '封面照片编号');
+    if (!Array.isArray(stagedPhotos) || !stagedPhotos.length) throw error(422, '请至少选择一张照片。');
+    const candidates = stagedPhotos.map((candidate) => {
+      const { photo, blobSha } = inputRecord(candidate);
+      const { id, name, file } = inputRecord(photo);
+      identifier(id, '照片编号');
+      inputText(name, { label: '照片名称', max: 255 });
+      if (typeof file !== 'string' || !PHOTO_PATH.test(file) || typeof blobSha !== 'string' || !SHA.test(blobSha)) {
+        throw error(422, '照片凭据无效，请重新上传。');
+      }
+      return { photo: { id, name, file }, getBlobSha: () => blobSha };
+    });
+    return publishMemory(target, candidates, coverPhotoId);
   }
 
   async function addMemoryPhotos(input) {
-    const { operationId: operationInput, entryId, date, title = '', story = '', location = '',
-      category = '日常', photos } = inputRecord(input);
-    const operationId = operationKey(operationInput);
-    const isExisting = entryId !== undefined;
-    let newEntry;
-    if (isExisting) {
-      inputText(entryId, { label: '回忆编号', max: 150, required: true });
-      if (/\s|[\u0000-\u001f\u007f]/.test(entryId)) throw error(422, '回忆编号无效。');
-    } else {
-      if (!validDate(date)) throw error(422, '请选择 1900 年至 9999 年之间的有效日期。');
-      if (!CATEGORIES.has(category)) throw error(422, '请选择有效的回忆分类。');
-      newEntry = {
-        id: `published-${operationId}`,
-        date,
-        title: inputText(title, { label: '回忆标题', max: 100 }),
-        story: inputText(story, { label: '回忆内容', max: 10000, trim: false }),
-        location: inputText(location, { label: '地点', max: 150 }),
-        category,
-        favorite: false,
-        photos: [],
-      };
-    }
-    if (!Array.isArray(photos) || photos.length !== 1) {
-      throw error(422, '每次可上传一张照片。');
-    }
-
-    const { photo, content } = await preparePhoto(photos[0], operationId);
+    const target = memoryTarget(input);
+    const { photos, setAsCover = false } = input;
+    if (typeof setAsCover !== 'boolean') throw error(422, '封面选项无效。');
+    if (!Array.isArray(photos) || photos.length !== 1) throw error(422, '每次可上传一张照片。');
+    const { photo, content } = await preparePhoto(photos[0], target.operationId);
     let blobSha;
-    return writeFiles(async (head) => {
-      const album = parseAlbum(await readFile(ALBUM_PATH, head));
-      const existing = album.entries.find((entry) => entry.id === (isExisting ? entryId : newEntry.id));
-      if (isExisting && !existing) throw error(404, '找不到这条回忆，请刷新后重试。');
-      if (!isExisting && existing) return [];
-      if (!existing && album.entries.length >= MAX_ENTRIES) throw error(422, '回忆数量已达上限。');
-
-      const entry = existing || { ...newEntry, photos: [] };
-      if (entry.photos.some((item) => item.id === photo.id || item.file === photo.file)) return [];
-      if (entry.photos.length >= MAX_PHOTOS_PER_ENTRY) {
-        throw error(422, `每条回忆最多保存 ${MAX_PHOTOS_PER_ENTRY} 张照片。`);
-      }
-
-      const files = [];
-      const fileAlreadyPublished = album.entries.some((memory) => memory.photos.some((item) => item.file === photo.file));
-      if (!fileAlreadyPublished) {
-        if (!blobSha) {
-          const blob = await request('/git/blobs', { method: 'POST', body: { encoding: 'base64', content } });
-          blobSha = gitSha(blob?.sha);
-        }
-        files.push(gitBlob(photo.file, { sha: blobSha }));
-      }
-      entry.photos.push(photo);
-      const previousTimestamp = Math.max(album.updatedAt, entry.updatedAt ?? 0);
-      const now = Math.max(Date.now(), previousTimestamp + 1);
-      entry.updatedAt = now;
-      if (!existing) album.entries.push(entry);
-      album.revision = `published-${operationId}`;
-      album.updatedAt = now;
-      files.push(gitBlob(ALBUM_PATH, { content: `${JSON.stringify(album, null, 2)}\n` }));
-      return files;
-    }, `Add memory photos from album admin\n\nOperation: ${operationId}`);
+    const getBlobSha = async () => {
+      if (!blobSha) blobSha = await uploadBlob(content);
+      return blobSha;
+    };
+    return publishMemory(target, [{ photo, getBlobSha }], setAsCover ? photo.id : null);
   }
 
-  return { getContent, addActivity, addMemoryPhotos };
+  async function publishMemory({ operationId, targetId, newEntry }, candidates, coverPhotoId) {
+    const result = await writeFiles(async (head) => {
+      const album = parseAlbum(await readFile(ALBUM_PATH, head));
+      const existing = album.entries.find((entry) => entry.id === targetId);
+      if (!newEntry && !existing) throw error(404, '找不到这条回忆，请刷新后重试。');
+      if (existing && (newEntry || album.revision === 'published-' + operationId)) return [];
+      if (newEntry && album.entries.length >= MAX_ENTRIES) throw error(422, '回忆数量已达上限。');
+
+      const entry = existing || { ...newEntry, photos: [] };
+      const beforeCount = entry.photos.length;
+      const previousCover = explicitCoverId(entry);
+      const byId = new Map(entry.photos.map((photo) => [photo.id, photo]));
+      const byFile = new Map(entry.photos.map((photo) => [photo.file, photo]));
+      const filesAlreadyPublished = new Set();
+      for (const memory of album.entries) {
+        for (const photo of memory.photos) filesAlreadyPublished.add(photo.file);
+      }
+
+      let selectedId = byId.get(coverPhotoId)?.id ?? null;
+      const files = [];
+      for (const { photo, getBlobSha } of candidates) {
+        const matchingId = byId.get(photo.id);
+        if (matchingId && matchingId.file !== photo.file) throw error(409, '发现重复的照片编号，请重新上传。');
+        const storedPhoto = matchingId || byFile.get(photo.file);
+        if (photo.id === coverPhotoId) selectedId = storedPhoto?.id ?? photo.id;
+        if (storedPhoto) {
+          byId.set(photo.id, storedPhoto);
+          continue;
+        }
+
+        if (!filesAlreadyPublished.has(photo.file)) {
+          files.push(gitBlob(photo.file, { sha: await getBlobSha() }));
+          filesAlreadyPublished.add(photo.file);
+        }
+        entry.photos.push(photo);
+        byId.set(photo.id, photo);
+        byFile.set(photo.file, photo);
+      }
+
+      if (coverPhotoId && !selectedId) throw error(422, '封面必须是这条回忆中的照片。');
+      if (entry.photos.length === beforeCount && (!selectedId || selectedId === previousCover)) return [];
+      if (selectedId) entry.coverPhotoId = selectedId;
+      if (!existing) album.entries.push(entry);
+      files.push(albumChange(album, entry, operationId));
+      return files;
+    }, 'Add memory photos from album admin\n\nOperation: ' + operationId);
+    return { ...result, entryId: targetId };
+  }
+
+  async function setMemoryCover(input) {
+    const { operationId: operationInput, entryId: entryInput, photoId: photoInput } = inputRecord(input);
+    const operationId = operationKey(operationInput);
+    const entryId = identifier(entryInput, '回忆编号');
+    const photoId = identifier(photoInput, '照片编号');
+    return writeFiles(async (head) => {
+      const album = parseAlbum(await readFile(ALBUM_PATH, head));
+      const entry = album.entries.find((item) => item.id === entryId);
+      if (!entry) throw error(404, '找不到这条回忆，请刷新后重试。');
+      if (!entry.photos.some((photo) => photo.id === photoId)) throw error(404, '这条回忆中找不到这张照片。');
+      if (explicitCoverId(entry) === photoId) return [];
+      entry.coverPhotoId = photoId;
+      return [albumChange(album, entry, operationId)];
+    }, `Change memory cover from album admin\n\nOperation: ${operationId}`);
+  }
+
+  return { getContent, addActivity, removeActivity, stageMemoryPhoto, addMemoryPhotoBatch, addMemoryPhotos, setMemoryCover };
 }

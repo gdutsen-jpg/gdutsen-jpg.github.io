@@ -37,6 +37,8 @@ test('assets, readiness, and anonymous write access', async () => {
 test('OAuth PKCE, owner and repository restrictions, encrypted session, and same-origin mutations', async () => {
   const requests = [];
   const mutations = [];
+  const stagedPhoto = { id: 'staged-photo', name: 'photo.jpg', file: 'assets/photos/sample.jpg' };
+  const stagedBlob = 'b'.repeat(40);
   let userId = 77;
   const installation = { id: 23, account: { id: 55 }, permissions: { contents: 'write' }, repository_selection: 'selected' };
   const repository = { id: 78, full_name: 'owner/pages', permissions: { push: true } };
@@ -63,7 +65,21 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
         mutations.push(input);
         return { commit: 'abc', changed: true };
       };
-      return { getContent: () => ({ activities: [], memories: [] }), addActivity: save, addMemoryPhotos: save };
+      return {
+        getContent: () => ({ activities: [], memories: [] }),
+        addActivity: save,
+        removeActivity: save,
+        addMemoryPhotos: save,
+        setMemoryCover: save,
+        stageMemoryPhoto: (input) => {
+          mutations.push(input);
+          return { photo: stagedPhoto, blobSha: stagedBlob };
+        },
+        addMemoryPhotoBatch: (input, staged) => {
+          assert.deepEqual(staged, [{ photo: stagedPhoto, blobSha: stagedBlob }]);
+          return save({ operationId: input.operationId, coverPhotoId: input.coverPhotoId });
+        },
+      };
     },
   });
   const start = await request(worker, '/auth/login');
@@ -126,13 +142,32 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   assert.equal((await request(worker, '/api/activities', makeWrite('https://elsewhere.example', '{}'))).status, 403);
   assert.equal((await request(worker, '/api/activities', makeWrite(base, '{}', 'text/plain'))).status, 415);
   assert.equal((await request(worker, '/api/activities', makeWrite(base, '[]'))).status, 400);
-  assert.equal((await request(worker, '/api/memories', makeWrite(base, 'x'.repeat(1_450_001)))).status, 413);
+  assert.equal((await request(worker, '/api/photos', makeWrite(base, 'x'.repeat(1_450_001)))).status, 413);
   assert.equal(mutations.length, 0);
   const activity = { name: '测试', operationId: 'browser-update-01' };
   assert.deepEqual(await (await request(worker, '/api/activities', makeWrite(base, JSON.stringify(activity)))).json(), { commit: 'abc', changed: true });
   const memory = { photos: [{ name: 'photo.jpg', dataUrl: 'data:image/jpeg;base64,ABCD' }] };
   assert.deepEqual(await (await request(worker, '/api/memories', makeWrite(base, JSON.stringify(memory)))).json(), { commit: 'abc', changed: true });
   assert.deepEqual(mutations, [activity, memory]);
+  const remove = { name: activity.name, operationId: 'browser-remove-01' };
+  assert.equal((await request(worker, '/api/activities/remove', makeWrite(base, JSON.stringify(remove)))).status, 200);
+  assert.deepEqual(mutations.at(-1), remove);
+  const stageInput = { name: 'photo.jpg', operationId: 'browser-photo-001', dataUrl: 'data:image/jpeg;base64,ABCD' };
+  const stage = await request(worker, '/api/photos', makeWrite(base, JSON.stringify(stageInput)));
+  assert.equal(stage.status, 200);
+  const upload = await stage.json();
+  assert.equal(upload.id, stagedPhoto.id);
+  assert.equal(typeof upload.receipt, 'string');
+  assert.doesNotMatch(upload.receipt, /assets\/photos/);
+  const batch = { operationId: 'browser-batch-001', coverPhotoId: upload.id, photoReceipts: [upload.receipt] };
+  const forged = { ...batch, photoReceipts: [upload.receipt + 'altered'] };
+  assert.equal((await request(worker, '/api/memories', makeWrite(base, JSON.stringify(forged)))).status, 422);
+  assert.deepEqual(mutations.at(-1), stageInput);
+  assert.equal((await request(worker, '/api/memories', makeWrite(base, JSON.stringify(batch)))).status, 200);
+  assert.deepEqual(mutations.at(-1), { operationId: batch.operationId, coverPhotoId: batch.coverPhotoId });
+  const cover = { entryId: 'existing', photoId: upload.id, operationId: 'browser-cover-001' };
+  assert.equal((await request(worker, '/api/memories/cover', makeWrite(base, JSON.stringify(cover)))).status, 200);
+  assert.deepEqual(mutations.at(-1), cover);
   const logout = await request(worker, '/auth/logout', { method: 'POST', headers: { Origin: base, Cookie: cookie } });
   assert.equal(logout.status, 204);
   assert.match(logout.headers.getSetCookie()[0], /Max-Age=0/);

@@ -1,7 +1,5 @@
 "use strict";
 
-const PHOTO_ENTRY_LIMIT = 40;
-const PHOTO_ENTRY_FULL_MESSAGE = "这条回忆已达到 40 张照片的上限。";
 const PHOTO_EDGE_LIMIT = 2400;
 const PHOTO_SIZE_LIMIT = 1024 * 1024;
 const SOURCE_SIZE_LIMIT = 25 * 1024 * 1024;
@@ -22,9 +20,12 @@ const retryContent = document.getElementById("retry-content");
 const editor = document.getElementById("editor");
 const editorIntro = document.getElementById("editor-intro");
 const activityList = document.getElementById("activity-list");
+const activitiesEmpty = document.getElementById("activities-empty");
 const activityForm = document.getElementById("activity-form");
 const activityName = document.getElementById("activity-name");
 const activityStatus = document.getElementById("activity-status");
+const activityRemoveDialog = document.getElementById("activity-remove-dialog");
+const activityRemoveDetail = document.getElementById("activity-remove-detail");
 const memoryForm = document.getElementById("memory-form");
 const newFields = document.getElementById("new-fields");
 const existingFields = document.getElementById("existing-fields");
@@ -34,12 +35,24 @@ const saveMemory = document.getElementById("save-memory");
 const photoInput = document.getElementById("photo-files");
 const photoStatus = document.getElementById("photo-status");
 const photoList = document.getElementById("photo-list");
+const queueCoverPicker = document.getElementById("queue-cover-picker");
+const existingCover = document.getElementById("existing-cover");
+const toggleExistingCover = document.getElementById("toggle-existing-cover");
+const existingCoverForm = document.getElementById("existing-cover-form");
+const existingCoverList = document.getElementById("existing-cover-list");
+const existingCoverStatus = document.getElementById("existing-cover-status");
+const saveExistingCover = existingCoverForm.querySelector('button[type="submit"]');
 const pendingOperations = new Map();
+const stagedPhotos = [];
 
-let stagedPhoto = null;
+let queuedCoverId = "";
+let pendingPublication = null;
+let coverPickerEntryId = "";
+let coverPickerOpen = false;
+let selectedExistingCoverId = "";
+let activityRemoval = null;
 let content = null;
 let saving = false;
-let processingPhotos = false;
 let readingContent = false;
 
 class ApiError extends Error {
@@ -96,40 +109,71 @@ function showRequestError(element, error) {
   setStatus(element, error.message, { error: true });
 }
 
+function editorLocked() {
+  return saving || readingContent || !content;
+}
+
+function selectedMemory() {
+  return content?.memories.find((memory) => memory.id === memoryChoice.value);
+}
+
 function syncControls() {
-  const locked = saving || processingPhotos || readingContent || !content;
+  const locked = editorLocked();
   const existing = memoryForm.elements.mode.value === "existing";
   for (const field of activityForm.elements) {
     field.disabled = locked;
+  }
+  for (const button of activityList.querySelectorAll("button")) {
+    button.disabled = locked;
   }
   for (const field of Array.from(memoryForm.elements)) {
     if (field instanceof HTMLFieldSetElement) {
       continue;
     }
     const hiddenField = (existing && newFields.contains(field)) || (!existing && existingFields.contains(field));
-    field.disabled = locked || hiddenField;
+    field.disabled = locked || hiddenField || (pendingPublication !== null && field !== saveMemory);
   }
   const existingOption = memoryForm.querySelector('[value="existing"]');
   existingOption.disabled ||= !content?.memories.length;
-  for (const button of photoList.querySelectorAll("button")) {
-    button.disabled = locked;
+  const editingCoverLocked = locked || pendingPublication !== null;
+  for (const input of existingCoverList.querySelectorAll("input")) {
+    input.disabled = editingCoverLocked;
   }
-  logout.disabled = saving || processingPhotos;
-  retryContent.disabled = saving || processingPhotos || readingContent;
+  toggleExistingCover.disabled = editingCoverLocked;
+  saveExistingCover.disabled = editingCoverLocked || !selectedExistingCoverId || selectedExistingCoverId === selectedMemory()?.coverPhotoId;
+  logout.disabled = saving;
+  retryContent.disabled = saving || readingContent;
   newFields.hidden = existing;
   existingFields.hidden = !existing;
   memoryChoice.required = existing;
-  saveMemory.textContent = existing ? "发布照片" : "发布回忆";
+  saveMemory.textContent = pendingPublication ? "重试发布" : (existing ? "发布照片" : "发布回忆");
 }
 
 function renderContent() {
-  const activityRows = content.activities.map((name) => {
+  const activityRows = content.activities.map((name, index) => {
     const item = document.createElement("li");
-    item.textContent = name;
+    const label = document.createElement("span");
+    const remove = document.createElement("button");
+    label.textContent = name;
+    remove.type = "button";
+    remove.className = "text-button";
+    remove.textContent = "删除";
+    remove.setAttribute("aria-label", `删除活动 ${name}`);
+    remove.addEventListener("click", () => {
+      if (editorLocked()) {
+        return;
+      }
+      activityRemoval = { name, index, trigger: remove };
+      activityRemoveDetail.textContent = `确定从转盘中删除“${name}”吗？`;
+      activityRemoveDialog.returnValue = "";
+      activityRemoveDialog.showModal();
+    });
+    item.append(label, remove);
     return item;
   });
   activityList.replaceChildren(...activityRows);
   activityList.hidden = activityRows.length === 0;
+  activitiesEmpty.hidden = activityRows.length > 0;
 
   const selectedMemory = memoryChoice.value;
   const memoryOptions = content.memories.map((memory) => {
@@ -143,6 +187,7 @@ function renderContent() {
   if (!memoryOptions.length) {
     memoryForm.elements.mode.value = "new";
   }
+  renderExistingCover();
 }
 
 async function refreshContent() {
@@ -224,13 +269,17 @@ function operationId(key) {
   return id;
 }
 
-async function save(path, payload, key) {
-  const response = await request(path, {
+function post(path, payload) {
+  return request(path, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...payload, operationId: operationId(key) })
+    body: JSON.stringify(payload)
   });
-  if (typeof response.changed !== "boolean") {
+}
+
+async function save(path, payload, key, requireEntryId = false) {
+  const response = await post(path, { ...payload, operationId: payload.operationId ?? operationId(key) });
+  if (typeof response.changed !== "boolean" || (requireEntryId && (typeof response.entryId !== "string" || !response.entryId))) {
     throw new Error("暂时无法确认提交结果，请重试同一条内容。");
   }
   pendingOperations.delete(key);
@@ -244,9 +293,9 @@ function showCommit(element, result, message) {
   setStatus(element, message, { link });
 }
 
-async function addActivity(event) {
+function addActivity(event) {
   event.preventDefault();
-  if (saving || processingPhotos || readingContent || !content) {
+  if (editorLocked()) {
     return;
   }
   const name = activityName.value.trim();
@@ -255,16 +304,26 @@ async function addActivity(event) {
     activityName.focus();
     return;
   }
+  return saveActivity(name);
+}
+
+async function saveActivity(name, remove = false) {
+  const path = remove ? "/api/activities/remove" : "/api/activities";
   saving = true;
   syncControls();
-  setStatus(activityStatus, "正在提交活动…");
+  setStatus(activityStatus, remove ? "正在删除活动…" : "正在提交活动…");
   try {
-    const result = await save("/api/activities", { name }, `activity:${name}`);
-    activityForm.reset();
+    const result = await save(path, { name }, `${path}:${name}`);
+    if (!remove) {
+      activityForm.reset();
+    }
+    const status = remove
+      ? (result.changed ? "已提交删除。公开相册将在部署后更新。" : "这个活动已从转盘中移除。")
+      : (result.changed ? "已提交到 GitHub。公开相册将在部署后更新。" : "这个活动已在转盘清单中。");
     showCommit(
       activityStatus,
       result,
-      result.changed ? "已提交到 GitHub。公开相册将在部署后更新。" : "这个活动已在转盘清单中。"
+      status
     );
     await refreshContent();
   } catch (error) {
@@ -275,9 +334,18 @@ async function addActivity(event) {
   }
 }
 
-function photoEntryFull() {
-  const memory = content?.memories.find((entry) => entry.id === memoryChoice.value);
-  return memoryForm.elements.mode.value === "existing" && memory?.photoCount >= PHOTO_ENTRY_LIMIT;
+async function confirmActivityRemoval() {
+  const removal = activityRemoval;
+  activityRemoval = null;
+  if (!removal || activityRemoveDialog.returnValue !== "remove" || editorLocked()) {
+    return;
+  }
+  await saveActivity(removal.name, true);
+  if (document.activeElement === document.body || document.activeElement === removal.trigger) {
+    const buttons = activityList.querySelectorAll("button");
+    const next = buttons[removal.index] ?? buttons[removal.index - 1] ?? activityName;
+    next.focus();
+  }
 }
 
 function canvasBlob(canvas, quality) {
@@ -301,138 +369,198 @@ function dataUrl(blob) {
   });
 }
 
-async function preparePhoto(file) {
-  if (!PHOTO_TYPES.has(file.type) && (file.type || !/\.(jpe?g|png|webp|gif|avif)$/i.test(file.name))) {
-    throw new Error("请选择 JPG、PNG、WebP、GIF 或 AVIF 照片。");
-  }
-  if (file.size > SOURCE_SIZE_LIMIT) {
-    throw new Error("原始文件请控制在 25 MB 以内。");
-  }
-  const source = URL.createObjectURL(file);
+async function preparePhoto(photo) {
   const image = new Image();
-  try {
-    image.src = source;
-    await image.decode().catch(() => {
-      throw new Error("这张照片无法打开。");
-    });
-    const canvas = document.createElement("canvas");
-    const context = canvas.getContext("2d", { alpha: false });
-    if (!context || !image.naturalWidth || !image.naturalHeight) {
-      throw new Error("这张照片无法压缩。");
-    }
-    const scale = Math.min(1, PHOTO_EDGE_LIMIT / Math.max(image.naturalWidth, image.naturalHeight));
-    for (const size of [scale, scale * 0.8, scale * 0.64]) {
-      canvas.width = Math.max(1, Math.round(image.naturalWidth * size));
-      canvas.height = Math.max(1, Math.round(image.naturalHeight * size));
-      context.fillStyle = "#fff";
-      context.fillRect(0, 0, canvas.width, canvas.height);
-      context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      for (const quality of [0.9, 0.8, 0.7]) {
-        const blob = await canvasBlob(canvas, quality);
-        if (blob.size <= PHOTO_SIZE_LIMIT) {
-          const originalName = file.name.replace(/\.[^.]+$/, "").slice(0, 251);
-          const name = originalName.replace(/[\uD800-\uDBFF]$/, "") || "照片";
-          return { id: crypto.randomUUID(), name: `${name}.jpg`, dataUrl: await dataUrl(blob) };
-        }
+  image.src = photo.url;
+  await image.decode().catch(() => {
+    throw new Error("这张照片无法打开。");
+  });
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d", { alpha: false });
+  if (!context || !image.naturalWidth || !image.naturalHeight) {
+    throw new Error("这张照片无法压缩。");
+  }
+  const scale = Math.min(1, PHOTO_EDGE_LIMIT / Math.max(image.naturalWidth, image.naturalHeight));
+  for (const size of [scale, scale * 0.8, scale * 0.64]) {
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * size));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * size));
+    context.fillStyle = "#fff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+    for (const quality of [0.9, 0.8, 0.7]) {
+      const blob = await canvasBlob(canvas, quality);
+      if (blob.size <= PHOTO_SIZE_LIMIT) {
+        return dataUrl(blob);
       }
     }
-    throw new Error("压缩后仍超过单张照片大小限制。");
-  } finally {
-    URL.revokeObjectURL(source);
   }
+  throw new Error("压缩后仍超过单张照片大小限制。");
 }
 
-function renderPhoto() {
-  photoList.replaceChildren();
-  photoList.hidden = !stagedPhoto;
-  if (!stagedPhoto) {
-    return;
-  }
+function photoCard(photo, group, coverId) {
   const item = document.createElement("li");
+  const label = document.createElement("label");
   const preview = document.createElement("img");
   const name = document.createElement("span");
-  const remove = document.createElement("button");
-  preview.src = stagedPhoto.dataUrl;
+  const option = document.createElement("span");
+  const radio = document.createElement("input");
+  label.className = "photo-choice";
+  preview.src = photo.url;
   preview.alt = "";
+  preview.loading = "lazy";
+  preview.decoding = "async";
   name.className = "photo-name";
-  name.textContent = stagedPhoto.name;
-  name.title = stagedPhoto.name;
-  remove.className = "text-button";
-  remove.type = "button";
-  remove.setAttribute("aria-label", `移除照片 ${stagedPhoto.name}`);
-  remove.textContent = "移除";
-  remove.addEventListener("click", () => {
-    stagedPhoto = null;
-    renderPhoto();
-    setStatus(photoStatus, "");
-    photoInput.focus();
-  });
-  item.append(preview, name, remove);
-  photoList.append(item);
+  name.textContent = photo.name;
+  name.title = photo.name;
+  option.className = "cover-option";
+  radio.type = "radio";
+  radio.name = group;
+  radio.value = photo.id;
+  radio.checked = photo.id === coverId;
+  radio.setAttribute("aria-label", `将 ${photo.name} 设为封面`);
+  option.append(radio, "设为封面");
+  label.append(preview, name, option);
+  item.append(label);
+  return { item, radio };
 }
 
-async function selectPhoto() {
-  const file = photoInput.files[0];
+function renderQueuedPhotos() {
+  const rows = stagedPhotos.map((photo, index) => {
+    const { item, radio } = photoCard(photo, "upload-cover", queuedCoverId);
+    const remove = document.createElement("button");
+    radio.addEventListener("change", () => {
+      queuedCoverId = photo.id;
+    });
+    remove.className = "text-button";
+    remove.type = "button";
+    remove.setAttribute("aria-label", `移除照片 ${photo.name}`);
+    remove.textContent = "移除";
+    remove.addEventListener("click", () => {
+      URL.revokeObjectURL(photo.url);
+      stagedPhotos.splice(index, 1);
+      if (queuedCoverId === photo.id) {
+        queuedCoverId = "";
+      }
+      renderQueuedPhotos();
+      setStatus(photoStatus, "");
+      setStatus(memoryStatus, "");
+      (photoList.querySelectorAll("button")[index] ?? photoInput).focus();
+    });
+    item.append(remove);
+    if (photo.error) {
+      const error = document.createElement("p");
+      error.className = "photo-error";
+      error.textContent = photo.error;
+      item.append(error);
+    }
+    return item;
+  });
+  photoList.replaceChildren(...rows);
+  queueCoverPicker.hidden = rows.length === 0;
+  queueCoverPicker.querySelector('input[value=""]').checked = !queuedCoverId;
+}
+
+function selectPhotos() {
+  const files = Array.from(photoInput.files);
   photoInput.value = "";
-  if (!file || saving || processingPhotos) {
+  if (!files.length || editorLocked() || pendingPublication) {
     return;
   }
-  if (photoEntryFull()) {
-    setStatus(photoStatus, PHOTO_ENTRY_FULL_MESSAGE, { error: true });
-    return;
+  const rejected = [];
+  for (const file of files) {
+    if (!PHOTO_TYPES.has(file.type) && (file.type || !/\.(jpe?g|png|webp|gif|avif)$/i.test(file.name))) {
+      rejected.push(`${file.name}（格式不支持）`);
+    } else if (file.size > SOURCE_SIZE_LIMIT) {
+      rejected.push(`${file.name}（超过 25 MB）`);
+    } else {
+      const stem = file.name.replace(/\.[^.]+$/, "").slice(0, 251).replace(/[\uD800-\uDBFF]$/, "");
+      stagedPhotos.push({ id: crypto.randomUUID(), url: URL.createObjectURL(file), name: `${stem || "照片"}.jpg` });
+    }
   }
-  processingPhotos = true;
-  syncControls();
+  renderQueuedPhotos();
   setStatus(memoryStatus, "");
-  setStatus(photoStatus, "正在压缩照片…");
-  try {
-    stagedPhoto = await preparePhoto(file);
-    renderPhoto();
-    setStatus(photoStatus, "照片已压缩，可以发布。");
-  } catch (error) {
-    setStatus(photoStatus, `${file.name}：${error.message}`, { error: true });
-  } finally {
-    processingPhotos = false;
-    syncControls();
+  const selected = stagedPhotos.length ? `已选 ${stagedPhotos.length} 张照片。` : "";
+  const errors = rejected.length ? ` 这 ${rejected.length} 个文件无法添加：${rejected.slice(0, 3).join("、")}${rejected.length > 3 ? "等" : ""}。` : "";
+  setStatus(photoStatus, (selected + errors).trim(), { error: rejected.length > 0 });
+}
+
+async function stagePhotos() {
+  let prepared = stagedPhotos.filter((photo) => photo.receipt).length;
+  for (const photo of stagedPhotos) {
+    if (photo.receipt || photo.error) {
+      continue;
+    }
+    setStatus(memoryStatus, `已准备 ${prepared}/${stagedPhotos.length} 张，正在处理 ${photo.name}…`);
+    try {
+      photo.dataUrl ??= await preparePhoto(photo);
+    } catch (error) {
+      photo.error = error.message;
+      continue;
+    }
+    const staged = await post("/api/photos", { operationId: photo.id, name: photo.name, dataUrl: photo.dataUrl });
+    if (typeof staged.id !== "string" || typeof staged.receipt !== "string" || !staged.id || !staged.receipt) {
+      throw new Error("暂时无法确认照片是否已准备，请重试。");
+    }
+    photo.stagedId = staged.id;
+    photo.receipt = staged.receipt;
+    delete photo.dataUrl;
+    prepared += 1;
   }
+  return prepared;
 }
 
 async function publishMemory(event) {
   event.preventDefault();
-  if (saving || processingPhotos || readingContent || !content) {
+  if (editorLocked()) {
     return;
   }
-  if (!stagedPhoto) {
+  if (!stagedPhotos.length) {
     setStatus(memoryStatus, "请先选择一张照片。", { error: true });
     photoInput.focus();
     return;
   }
-  if (photoEntryFull()) {
-    setStatus(memoryStatus, PHOTO_ENTRY_FULL_MESSAGE, { error: true });
-    return;
-  }
   const fields = new FormData(memoryForm);
-  const existing = fields.get("mode") === "existing";
-  const details = existing ? { entryId: fields.get("entryId") } : {
-    date: fields.get("date"),
-    title: fields.get("title").trim(),
-    category: fields.get("category"),
-    story: fields.get("story"),
-    location: fields.get("location").trim()
-  };
-  const { id, name, dataUrl } = stagedPhoto;
-  const key = JSON.stringify([details, id]);
+  const details = pendingPublication ?? (fields.get("mode") === "existing"
+    ? { entryId: fields.get("entryId") }
+    : {
+      date: fields.get("date"),
+      title: fields.get("title").trim(),
+      category: fields.get("category"),
+      story: fields.get("story"),
+      location: fields.get("location").trim()
+    });
   saving = true;
   syncControls();
-  setStatus(memoryStatus, "正在上传照片并提交到 GitHub…");
+  let sendingPublication = false;
   try {
-    const result = await save("/api/memories", { ...details, photos: [{ name, dataUrl }] }, key);
-    stagedPhoto = null;
-    renderPhoto();
-    setStatus(photoStatus, "");
-    if (!existing) {
+    if (!pendingPublication?.photoReceipts) {
+      const prepared = await stagePhotos();
+      if (prepared !== stagedPhotos.length) {
+        setStatus(memoryStatus, `已准备 ${prepared} 张照片。请移除无法处理的照片后再发布。`, { error: true });
+        return;
+      }
+      pendingPublication = {
+        ...details,
+        operationId: pendingPublication?.operationId ?? crypto.randomUUID(),
+        photoReceipts: stagedPhotos.map((photo) => photo.receipt)
+      };
+      const cover = stagedPhotos.find((photo) => photo.id === queuedCoverId);
+      if (cover) {
+        pendingPublication.coverPhotoId = cover.stagedId;
+      }
+    }
+    setStatus(memoryStatus, `正在将 ${stagedPhotos.length} 张照片提交到 GitHub…`);
+    sendingPublication = true;
+    const result = await save("/api/memories", pendingPublication, null, true);
+    if (!pendingPublication.entryId) {
       memoryForm.reset();
     }
+    pendingPublication = null;
+    for (const photo of stagedPhotos.splice(0)) {
+      URL.revokeObjectURL(photo.url);
+    }
+    queuedCoverId = "";
+    setStatus(photoStatus, "");
     showCommit(
       memoryStatus,
       result,
@@ -440,7 +568,86 @@ async function publishMemory(event) {
     );
     await refreshContent();
   } catch (error) {
+    if (sendingPublication && error.status === 422 && error.message.includes("暂存已过期")) {
+      for (const photo of stagedPhotos) {
+        delete photo.receipt;
+        delete photo.stagedId;
+      }
+      pendingPublication.photoReceipts = null;
+      setStatus(memoryStatus, "上传凭证已过期。再次发布即可重新准备已选照片。", { error: true });
+      return;
+    }
+    if (sendingPublication && error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status)) {
+      pendingPublication = null;
+    }
     showRequestError(memoryStatus, error);
+  } finally {
+    saving = false;
+    renderQueuedPhotos();
+    syncControls();
+  }
+}
+
+function renderExistingCover() {
+  const memory = memoryForm.elements.mode.value === "existing" ? selectedMemory() : null;
+  const entryId = memory?.id ?? "";
+  const photos = memory?.photos ?? [];
+  if (coverPickerEntryId !== entryId) {
+    coverPickerEntryId = entryId;
+    coverPickerOpen = false;
+    selectedExistingCoverId = "";
+    setStatus(existingCoverStatus, "");
+  }
+  existingCover.hidden = photos.length === 0;
+  toggleExistingCover.textContent = coverPickerOpen ? "收起封面选择" : "更换已有封面";
+  toggleExistingCover.setAttribute("aria-expanded", String(coverPickerOpen));
+  existingCoverForm.hidden = !coverPickerOpen;
+  if (!coverPickerOpen) {
+    existingCoverList.replaceChildren();
+    return;
+  }
+  if (!photos.some((photo) => photo.id === selectedExistingCoverId)) {
+    selectedExistingCoverId = memory.coverPhotoId || photos[0]?.id || "";
+  }
+  const rows = photos.map((photo) => {
+    const { item, radio } = photoCard(photo, "existing-photo-cover", selectedExistingCoverId);
+    radio.addEventListener("change", () => {
+      selectedExistingCoverId = photo.id;
+      syncControls();
+    });
+    return item;
+  });
+  existingCoverList.replaceChildren(...rows);
+}
+
+function changeExistingCoverVisibility() {
+  coverPickerOpen = !coverPickerOpen;
+  renderExistingCover();
+  syncControls();
+}
+
+async function updateExistingCover(event) {
+  event.preventDefault();
+  const memory = selectedMemory();
+  if (editorLocked() || pendingPublication || !memory || !selectedExistingCoverId || selectedExistingCoverId === memory.coverPhotoId) {
+    return;
+  }
+  const entryId = memory.id;
+  const photoId = selectedExistingCoverId;
+  saving = true;
+  syncControls();
+  setStatus(existingCoverStatus, "正在提交封面…");
+  try {
+    const result = await save("/api/memories/cover", { entryId, photoId }, `cover:${entryId}:${photoId}`);
+    memory.coverPhotoId = photoId;
+    showCommit(
+      existingCoverStatus,
+      result,
+      result.changed ? "已提交封面。公开相册将在部署后更新。" : "这张照片已是回忆封面。"
+    );
+    await refreshContent();
+  } catch (error) {
+    showRequestError(existingCoverStatus, error);
   } finally {
     saving = false;
     syncControls();
@@ -449,11 +656,7 @@ async function publishMemory(event) {
 
 function updateMemoryDestination() {
   setStatus(memoryStatus, "");
-  if (photoEntryFull()) {
-    setStatus(photoStatus, PHOTO_ENTRY_FULL_MESSAGE, { error: true });
-  } else {
-    setStatus(photoStatus, stagedPhoto ? "照片已压缩，可以发布。" : "");
-  }
+  renderExistingCover();
   syncControls();
 }
 
@@ -473,12 +676,18 @@ logout.addEventListener("click", async () => {
 retrySession.addEventListener("click", checkSession);
 retryContent.addEventListener("click", refreshContent);
 activityForm.addEventListener("submit", addActivity);
+activityRemoveDialog.addEventListener("close", confirmActivityRemoval);
 memoryForm.addEventListener("submit", publishMemory);
 memoryForm.querySelectorAll('input[name="mode"]').forEach((radio) => {
   radio.addEventListener("change", updateMemoryDestination);
 });
 memoryChoice.addEventListener("change", updateMemoryDestination);
-photoInput.addEventListener("change", selectPhoto);
+photoInput.addEventListener("change", selectPhotos);
+queueCoverPicker.querySelector('input[value=""]').addEventListener("change", () => {
+  queuedCoverId = "";
+});
+toggleExistingCover.addEventListener("click", changeExistingCoverVisibility);
+existingCoverForm.addEventListener("submit", updateExistingCover);
 syncControls();
 showAuthFeedback();
 checkSession();

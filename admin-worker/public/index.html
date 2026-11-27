@@ -42,7 +42,8 @@
       <section class="editor-section" aria-labelledby="activities-heading">
         <div class="section-heading">
           <h2 id="activities-heading">活动转盘</h2>
-          <ul class="activities" id="activity-list" aria-label="已发布的活动" hidden></ul>
+          <ul class="activities" id="activity-list" aria-label="转盘活动" hidden></ul>
+          <p class="field-help" id="activities-empty" hidden>转盘暂无活动。</p>
         </div>
         <form id="activity-form">
           <label for="activity-name">活动名称</label>
@@ -89,20 +90,47 @@
           </div>
           <div class="upload">
             <div class="photo-picker">
-              <input class="visually-hidden" id="photo-files" type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif" aria-describedby="photo-help">
+              <input class="visually-hidden" id="photo-files" type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif" aria-describedby="photo-help">
               <label class="button secondary" for="photo-files">选择照片</label>
-              <p class="field-help" id="photo-help">每次可上传 1 张，网页会自动压缩照片。可通过已有回忆继续添加。</p>
+              <p class="field-help" id="photo-help">可一次选择多张照片，网页会自动压缩。</p>
             </div>
             <p class="status" id="photo-status" role="status" aria-live="polite" hidden></p>
-            <ul class="photo-list" id="photo-list" aria-label="待上传的照片" hidden></ul>
+            <fieldset class="cover-picker" id="queue-cover-picker" hidden>
+              <legend>本次上传的照片</legend>
+              <label class="cover-default"><input type="radio" name="upload-cover" value="" checked> 不指定封面</label>
+              <ul class="photo-list" id="photo-list"></ul>
+            </fieldset>
           </div>
           <div class="save-line">
             <button class="button primary" id="save-memory" type="submit">发布回忆</button>
             <p class="status" id="memory-status" role="status" aria-live="polite" hidden></p>
           </div>
         </form>
+        <div class="existing-cover" id="existing-cover" hidden>
+          <button class="text-button" id="toggle-existing-cover" type="button" aria-expanded="false" aria-controls="existing-cover-form">更换已有封面</button>
+          <form id="existing-cover-form" hidden>
+            <fieldset class="cover-picker">
+              <legend>选择封面照片</legend>
+              <ul class="photo-list" id="existing-cover-list"></ul>
+            </fieldset>
+            <div class="save-line">
+              <button class="button secondary" type="submit">保存封面</button>
+              <p class="status" id="existing-cover-status" role="status" hidden></p>
+            </div>
+          </form>
+        </div>
       </section>
     </div>
   </main>
+  <dialog class="confirm-dialog" id="activity-remove-dialog" aria-labelledby="activity-remove-title" aria-describedby="activity-remove-detail">
+    <form method="dialog">
+      <h2 id="activity-remove-title">删除活动</h2>
+      <p id="activity-remove-detail"></p>
+      <div class="dialog-actions">
+        <button class="button secondary" type="submit" value="cancel" autofocus>取消</button>
+        <button class="button primary" type="submit" value="remove">确认删除</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>

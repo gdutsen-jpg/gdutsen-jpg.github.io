@@ -165,13 +165,26 @@ h2 {
 }
 
 .activities li {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
   max-width: 100%;
-  padding: 0.22rem 0.5rem;
+  padding: 0 0.25rem 0 0.5rem;
   border-radius: 0.32rem;
   background: var(--soft);
   color: #65495e;
   font-size: 0.85rem;
+}
+
+.activities span {
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.activities button {
+  flex: none;
+  min-height: 1.65rem;
+  font-size: 0.8rem;
 }
 
 label {
@@ -360,6 +373,54 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   background: var(--paper);
 }
 
+.cover-picker {
+  min-width: 0;
+  margin: 0.9rem 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.cover-picker legend {
+  padding: 0;
+  font-size: 0.925rem;
+}
+
+.photo-choice {
+  cursor: pointer;
+}
+
+.photo-choice:has(input:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.cover-option, .cover-default {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cover-option {
+  padding: 0 0.35rem;
+  color: var(--accent-hover);
+  font-size: 0.8rem;
+}
+
+.cover-option input, .cover-default input {
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.photo-error {
+  margin: 0.2rem 0.4rem;
+  color: var(--error);
+  font-size: 0.8rem;
+}
+
+.existing-cover {
+  grid-column: 2;
+}
+
 .photo-list img {
   display: block;
   width: 100%;
@@ -397,6 +458,29 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
   margin-left: 0.35em;
 }
 
+.confirm-dialog {
+  width: min(100% - 2rem, 24rem);
+  padding: 1.25rem;
+  border: 1px solid var(--line);
+  border-radius: 0.85rem;
+  background: var(--paper);
+  color: var(--text);
+}
+
+.confirm-dialog::backdrop {
+  background: rgb(57 46 66 / 30%);
+}
+
+.confirm-dialog p {
+  overflow-wrap: anywhere;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
 @media (max-width: 44rem) {
   .editor-section {
     grid-template-columns: minmax(0, 1fr);
@@ -404,6 +488,10 @@ button:disabled, input:disabled, select:disabled, textarea:disabled {
 
   .activities {
     margin-top: 0.42rem;
+  }
+
+  .existing-cover {
+    grid-column: 1;
   }
 }
 
