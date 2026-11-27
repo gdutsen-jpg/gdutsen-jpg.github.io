@@ -9,6 +9,8 @@ globalThis.GomokuPublishedContent = {
   ],
   "visited": {
     "world": [],
-    "china": []
+    "china": [
+      "CN-GD"
+    ]
   }
 };
