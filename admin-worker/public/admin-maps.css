@@ -1,0 +1,65 @@
+.visited-section {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.visited-maps {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.2rem;
+}
+
+.visited-panel h3 {
+  margin: 0 0 0.45rem;
+  font: 1.12rem/1.4 var(--pixel);
+}
+
+.visited-map {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin-block: 0.2rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 0.65rem;
+  background: var(--paper);
+}
+
+.visited-map path {
+  fill: #e6dce8;
+  stroke: #fffdfd;
+  stroke-width: 0.7;
+  vector-effect: non-scaling-stroke;
+}
+
+.visited-map path.is-visited {
+  fill: var(--accent);
+}
+
+.visited-map path.is-selected {
+  stroke: #b38eab;
+  stroke-width: 1.1;
+}
+
+.visited-map.is-editable path {
+  cursor: pointer;
+}
+
+.visited-map.is-editable path:hover {
+  fill: #b8799d;
+}
+
+.visited-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 0.6rem;
+}
+
+.visited-section .save-line {
+  margin-top: 0;
+}
+
+@media (max-width: 44rem) {
+  .visited-maps {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

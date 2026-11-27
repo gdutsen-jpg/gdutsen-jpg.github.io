@@ -1,4 +1,5 @@
 import { createGitHubStore } from './github-store.mjs';
+import { regionIds } from './region-ids.mjs';
 
 const SESSION_COOKIE = '__Host-gomoku-session';
 const OAUTH_COOKIE = '__Host-gomoku-oauth';
@@ -266,9 +267,10 @@ export function createAdminWorker({ fetcher = fetch, makeStore = createGitHubSto
         return json({ ready, user: authorized ? { login: session.login } : null, albumUrl: env.ALBUM_URL });
       }
       if (!authorized) return json({ error: 'Sign in with GitHub to continue.' }, 401);
-      const store = makeStore({ token: session.token, repository: env.GITHUB_REPOSITORY, branch: env.GITHUB_BRANCH, fetcher });
+      const store = makeStore({ token: session.token, repository: env.GITHUB_REPOSITORY, branch: env.GITHUB_BRANCH, fetcher, regionIds });
       if (method === 'GET' && pathname === '/api/content') return json(await store.getContent());
       if (method === 'POST' && pathname === '/api/activities') return json(await store.addActivity(await readJson(request)));
+      if (method === 'POST' && pathname === '/api/visited') return json(await store.updateVisited(await readJson(request)));
       if (method === 'POST' && pathname === '/api/activities/remove') return json(await store.removeActivity(await readJson(request)));
       if (method === 'POST' && pathname === '/api/photos') {
         const { photo, blobSha } = await store.stageMemoryPhoto(await readJson(request));

@@ -42,6 +42,10 @@ const existingCoverForm = document.getElementById("existing-cover-form");
 const existingCoverList = document.getElementById("existing-cover-list");
 const existingCoverStatus = document.getElementById("existing-cover-status");
 const saveExistingCover = existingCoverForm.querySelector('button[type="submit"]');
+const visitedSection = document.getElementById("visited-section");
+const saveVisited = document.getElementById("save-visited");
+const visitedDraft = document.getElementById("visited-draft");
+const visitedStatus = document.getElementById("visited-status");
 const pendingOperations = new Map();
 const stagedPhotos = [];
 
@@ -50,10 +54,15 @@ let pendingPublication = null;
 let coverPickerEntryId = "";
 let coverPickerOpen = false;
 let selectedExistingCoverId = "";
+let pendingVisitSave = null;
 let activityRemoval = null;
 let content = null;
 let saving = false;
 let readingContent = false;
+const visitMapEditor = globalThis.createGomokuMapEditor?.(visitedSection, () => {
+  setStatus(visitedStatus, "");
+  syncControls();
+});
 
 class ApiError extends Error {
   constructor(message, status) {
@@ -147,6 +156,12 @@ function syncControls() {
   existingFields.hidden = !existing;
   memoryChoice.required = existing;
   saveMemory.textContent = pendingPublication ? "重试发布" : (existing ? "发布照片" : "发布回忆");
+  const mapsLocked = visitMapEditor?.setLocked(locked || Boolean(pendingVisitSave));
+  const visitCount = (pendingVisitSave?.changes ?? visitMapEditor?.changes())?.length ?? 0;
+  saveVisited.disabled = locked || !visitCount || (!pendingVisitSave && mapsLocked);
+  saveVisited.textContent = pendingVisitSave && !saving ? "重试保存" : "保存足迹";
+  visitedDraft.hidden = visitCount === 0;
+  visitedDraft.textContent = visitCount ? `${visitCount} 处更改待保存` : "";
 }
 
 function renderContent() {
@@ -188,6 +203,7 @@ function renderContent() {
     memoryForm.elements.mode.value = "new";
   }
   renderExistingCover();
+  visitMapEditor?.receive(content.visited);
 }
 
 async function refreshContent() {
@@ -660,6 +676,39 @@ function updateMemoryDestination() {
   syncControls();
 }
 
+async function publishVisited() {
+  if (editorLocked()) {
+    return;
+  }
+  const changes = pendingVisitSave?.changes ?? visitMapEditor?.changes();
+  if (!changes?.length) {
+    return;
+  }
+  pendingVisitSave ??= { changes, operationId: crypto.randomUUID() };
+  saving = true;
+  syncControls();
+  setStatus(visitedStatus, "正在提交足迹…");
+  try {
+    const result = await save("/api/visited", pendingVisitSave, null);
+    visitMapEditor.markSaved(changes);
+    pendingVisitSave = null;
+    showCommit(
+      visitedStatus,
+      result,
+      result.changed ? "已提交足迹。公开相册将在部署后更新。" : "这些足迹已保存。"
+    );
+    await refreshContent();
+  } catch (error) {
+    if (error.status >= 400 && error.status < 500 && ![408, 429].includes(error.status)) {
+      pendingVisitSave = null;
+    }
+    showRequestError(visitedStatus, error);
+  } finally {
+    saving = false;
+    syncControls();
+  }
+}
+
 logout.addEventListener("click", async () => {
   logout.disabled = true;
   try {
@@ -688,6 +737,7 @@ queueCoverPicker.querySelector('input[value=""]').addEventListener("change", () 
 });
 toggleExistingCover.addEventListener("click", changeExistingCoverVisibility);
 existingCoverForm.addEventListener("submit", updateExistingCover);
+saveVisited.addEventListener("click", publishVisited);
 syncControls();
 showAuthFeedback();
 checkSession();

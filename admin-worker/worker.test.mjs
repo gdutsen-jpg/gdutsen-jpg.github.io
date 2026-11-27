@@ -57,7 +57,9 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
       assert.equal(url, 'https://api.github.com/user/installations/23/repositories');
       return Response.json({ total_count: repositories.length, repositories });
     },
-    makeStore: ({ token, repository, branch }) => {
+    makeStore: ({ token, repository, branch, regionIds }) => {
+      assert.equal(regionIds.world.has('JPN'), true);
+      assert.equal(regionIds.china.has('CN-GD'), true);
       assert.equal(token, 'ghu_test_bearer');
       assert.equal(repository, 'owner/pages');
       assert.equal(branch, 'main');
@@ -69,6 +71,7 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
         getContent: () => ({ activities: [], memories: [] }),
         addActivity: save,
         removeActivity: save,
+        updateVisited: save,
         addMemoryPhotos: save,
         setMemoryCover: save,
         stageMemoryPhoto: (input) => {
@@ -149,6 +152,15 @@ test('OAuth PKCE, owner and repository restrictions, encrypted session, and same
   const memory = { photos: [{ name: 'photo.jpg', dataUrl: 'data:image/jpeg;base64,ABCD' }] };
   assert.deepEqual(await (await request(worker, '/api/memories', makeWrite(base, JSON.stringify(memory)))).json(), { commit: 'abc', changed: true });
   assert.deepEqual(mutations, [activity, memory]);
+  const visits = {
+    operationId: 'browser-map-test01',
+    changes: [{ map: 'world', id: 'JPN', visited: true }, { map: 'china', id: 'CN-GD', visited: false }],
+  };
+  const visitsBody = JSON.stringify(visits);
+  assert.equal((await request(worker, '/api/visited', makeWrite('https://elsewhere.example', visitsBody))).status, 403);
+  assert.equal((await request(worker, '/api/visited', { method: 'POST', headers: { Origin: base }, body: visitsBody })).status, 401);
+  assert.equal((await request(worker, '/api/visited', makeWrite(base, visitsBody))).status, 200);
+  assert.deepEqual(mutations.at(-1), visits);
   const remove = { name: activity.name, operationId: 'browser-remove-01' };
   assert.equal((await request(worker, '/api/activities/remove', makeWrite(base, JSON.stringify(remove)))).status, 200);
   assert.deepEqual(mutations.at(-1), remove);

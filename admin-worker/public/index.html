@@ -7,6 +7,9 @@
   <meta name="theme-color" content="#fbf7f9">
   <title>相册管理 · 寻找我的玫瑰花</title>
   <link rel="stylesheet" href="/admin.css">
+  <link rel="stylesheet" href="/admin-maps.css">
+  <script src="/travel-map-data.js" defer></script>
+  <script src="/admin-maps.js" defer></script>
   <script src="/admin.js" defer></script>
 </head>
 <body>
@@ -119,6 +122,48 @@
             </div>
           </form>
         </div>
+      </section>
+
+      <section class="editor-section visited-section" id="visited-section" aria-labelledby="visited-heading">
+        <div class="section-heading">
+          <h2 id="visited-heading">旅行足迹</h2>
+          <p class="field-help">点地图或选地区，保存后会更新公开相册。</p>
+        </div>
+        <p class="status error" id="visited-map-error" role="status" hidden></p>
+        <div class="visited-maps">
+          <section class="visited-panel" data-visit-map="world" aria-labelledby="visited-world-heading">
+            <h3 id="visited-world-heading">世界地图</h3>
+            <svg class="visited-map" aria-hidden="true" focusable="false"></svg>
+            <div class="visited-controls">
+              <label>国家或地区
+                <select class="visited-select" disabled>
+                  <option value="">选择国家或地区</option>
+                </select>
+              </label>
+              <button class="button secondary visited-toggle" type="button" disabled>标记为去过</button>
+            </div>
+            <p class="field-help visited-count"></p>
+          </section>
+          <section class="visited-panel" data-visit-map="china" aria-labelledby="visited-china-heading">
+            <h3 id="visited-china-heading">中国地图</h3>
+            <svg class="visited-map" aria-hidden="true" focusable="false"></svg>
+            <div class="visited-controls">
+              <label>省级地区
+                <select class="visited-select" disabled>
+                  <option value="">选择省级地区</option>
+                </select>
+              </label>
+              <button class="button secondary visited-toggle" type="button" disabled>标记为去过</button>
+            </div>
+            <p class="field-help visited-count"></p>
+          </section>
+        </div>
+        <div class="save-line">
+          <button class="button primary" id="save-visited" type="button" disabled>保存足迹</button>
+          <p class="status" id="visited-draft" role="status" hidden></p>
+          <p class="status" id="visited-status" role="status" hidden></p>
+        </div>
+        <p class="field-help"><a href="/map-sources.txt" target="_blank" rel="noopener noreferrer">地图数据来源</a></p>
       </section>
     </div>
   </main>

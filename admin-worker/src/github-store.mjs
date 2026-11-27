@@ -6,6 +6,7 @@ const MAX_PHOTO_BYTES = 1024 * 1024;
 const CATEGORIES = new Set(['日常', '约会', '旅行', '纪念日', '心动']);
 const SHA = /^[a-f0-9]{40}$/;
 const PHOTO_PATH = /^assets\/photos\/[a-f0-9]{64}\.(jpg|png|webp|gif|avif)$/;
+const REGION_FORMATS = { world: /^[A-Z]{3}$/, china: /^CN-[A-Z]{2}$/ };
 const RAW_MEDIA_TYPE = 'application/vnd.github.raw+json';
 
 function error(status, message) {
@@ -182,6 +183,20 @@ function gitBlob(path, payload) {
   return { path, mode: '100644', type: 'blob', ...payload };
 }
 
+function siteContentChange(content) {
+  const source = `${CONTENT_ASSIGNMENT} = ${JSON.stringify(content, null, 2)};\n`;
+  return gitBlob(CONTENT_PATH, { content: source });
+}
+
+function visitedList(visited, map) {
+  return Array.isArray(visited?.[map]) ? visited[map] : [];
+}
+
+function regionSet(ids) {
+  if (ids instanceof Set) return ids;
+  return Array.isArray(ids) ? new Set(ids) : null;
+}
+
 function explicitCoverId(entry) {
   return entry.photos.find((photo) => photo.id === entry.coverPhotoId)?.id ?? null;
 }
@@ -194,7 +209,7 @@ function albumChange(album, entry, operationId) {
   return gitBlob(ALBUM_PATH, { content: `${JSON.stringify(album, null, 2)}\n` });
 }
 
-export function createGitHubStore({ token, repository, branch = 'main', fetcher = fetch }) {
+export function createGitHubStore({ token, repository, branch = 'main', fetcher = fetch, regionIds }) {
   if (typeof token !== 'string' || !token || typeof repository !== 'string' ||
       !/^[A-Za-z0-9-]+\/[A-Za-z0-9_.-]+$/.test(repository) || typeof branch !== 'string' || !branch ||
       branch.split('/').some((part) => !part || part === '.' || part === '..')) {
@@ -202,6 +217,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
   }
   const repoUrl = `https://api.github.com/repos/${repository}`;
   const branchPath = `heads/${branch.split('/').map(encodeURIComponent).join('/')}`;
+  const regions = { world: regionSet(regionIds?.world), china: regionSet(regionIds?.china) };
 
   async function request(path, { method = 'GET', body, raw = false, conflict = false } = {}) {
     const headers = {
@@ -289,7 +305,10 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       readFile(ALBUM_PATH, head),
       readFile(CONTENT_PATH, head),
     ]);
-    const { activities } = parseContent(contentSource);
+    const { activities, visited: configuredVisits } = parseContent(contentSource);
+    const filterVisits = (map) => [...new Set(visitedList(configuredVisits, map))].filter((id) =>
+      typeof id === 'string' && REGION_FORMATS[map].test(id) && (!regions[map] || regions[map].has(id)));
+    const visited = { world: filterVisits('world'), china: filterVisits('china') };
     const { entries } = parseAlbum(albumSource);
     const rawRoot = `https://raw.githubusercontent.com/${repository.split('/').map(encodeURIComponent).join('/')}/${head}`;
     const memories = entries.map((entry) => ({
@@ -305,7 +324,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       })),
     }));
     memories.sort((left, right) => right.date.localeCompare(left.date));
-    return { activities, memories };
+    return { activities, memories, visited };
   }
 
   async function changeActivity(input, action) {
@@ -321,8 +340,7 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
       const exists = otherActivities.length !== content.activities.length;
       if ((remove && !exists) || (!remove && exists)) return [];
       content.activities = remove ? otherActivities : [...content.activities, name];
-      const source = `${CONTENT_ASSIGNMENT} = ${JSON.stringify(content, null, 2)};\n`;
-      return [gitBlob(CONTENT_PATH, { content: source })];
+      return [siteContentChange(content)];
     }, `${action} activity from album admin\n\nOperation: ${operationId}`);
   }
 
@@ -332,6 +350,50 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
 
   function removeActivity(input) {
     return changeActivity(input, 'Remove');
+  }
+
+  async function updateVisited(input) {
+    const { operationId: operationInput, changes } = inputRecord(input);
+    const operationId = operationKey(operationInput);
+    if (!regions.world?.size || !regions.china?.size) throw error(503, '地图地区数据尚未配置。');
+    if (!Array.isArray(changes) || changes.length > regions.world.size + regions.china.size) {
+      throw error(422, '请提交有效的地图修改。');
+    }
+    const requested = { world: new Map(), china: new Map() };
+    for (const rawChange of changes) {
+      const { map, id, visited } = inputRecord(rawChange);
+      if ((map !== 'world' && map !== 'china') || typeof id !== 'string' || !REGION_FORMATS[map].test(id) ||
+          !regions[map].has(id) || typeof visited !== 'boolean') {
+        throw error(422, '地图或地区编号无效。');
+      }
+      const edits = requested[map];
+      if (edits.has(id) && edits.get(id) !== visited) throw error(422, '同一个地区存在互相冲突的修改。');
+      edits.set(id, visited);
+    }
+
+    return writeFiles(async (head) => {
+      const content = parseContent(await readFile(CONTENT_PATH, head));
+      const previous = record(content.visited) ? content.visited : {};
+      const next = { world: [], china: [], ...previous };
+      let changed = false;
+      for (const [map, edits] of Object.entries(requested)) {
+        const ids = new Set(visitedList(previous, map));
+        let mapChanged = false;
+        for (const [id, visited] of edits) {
+          if (visited === ids.has(id)) continue;
+          if (visited) ids.add(id);
+          else ids.delete(id);
+          mapChanged = true;
+        }
+        if (mapChanged) {
+          next[map] = [...ids];
+          changed = true;
+        }
+      }
+      if (!changed) return [];
+      content.visited = next;
+      return [siteContentChange(content)];
+    }, `Update visited regions from album admin\n\nOperation: ${operationId}`);
   }
 
   function memoryTarget(input) {
@@ -466,5 +528,5 @@ export function createGitHubStore({ token, repository, branch = 'main', fetcher 
     }, `Change memory cover from album admin\n\nOperation: ${operationId}`);
   }
 
-  return { getContent, addActivity, removeActivity, stageMemoryPhoto, addMemoryPhotoBatch, addMemoryPhotos, setMemoryCover };
+  return { getContent, addActivity, removeActivity, updateVisited, stageMemoryPhoto, addMemoryPhotoBatch, addMemoryPhotos, setMemoryCover };
 }
