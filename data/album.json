@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "albumId": "gomoku-github-pages-shared",
-  "revision": "efc2d4ae-7150-4c3a-99a6-75a9d433e7a2",
+  "revision": "published-8726bbb6-e6ce-4393-8818-204cab2a6030",
   "settings": {
     "nameOne": "森",
     "nameTwo": "芷",
@@ -38,7 +38,24 @@
       "favorite": false,
       "photos": [],
       "updatedAt": 1795678463876
+    },
+    {
+      "id": "published-8726bbb6-e6ce-4393-8818-204cab2a6030",
+      "date": "2026-11-28",
+      "title": "",
+      "story": "“这个人好欠”˙³˙",
+      "location": "华侨城",
+      "category": "约会",
+      "favorite": false,
+      "photos": [
+        {
+          "id": "published-e7c745ee-c3af-419d-95c1-8e55ed54f228-1",
+          "name": "IMG_1908.jpg",
+          "file": "assets/photos/eb0142ec596cebffd5b332749436208ebe81c8f2e033a4b5cbb75bc2cf5d2d7e.jpg"
+        }
+      ],
+      "updatedAt": 1795872671437
     }
   ],
-  "updatedAt": 1795678463877
+  "updatedAt": 1795872671437
 }
