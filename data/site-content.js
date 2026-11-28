@@ -13,7 +13,8 @@ globalThis.GomokuPublishedContent = {
     "自驾游",
     "打坐冥想",
     "台球",
-    "下棋"
+    "下棋",
+    "滑雪"
   ],
   "visited": {
     "world": [],
